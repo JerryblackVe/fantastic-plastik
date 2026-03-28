@@ -152,27 +152,6 @@
                 </div>
             </div>
 
-            <!-- Empaque y Envío -->
-            <div class="card">
-                <div class="card-header">
-                    <h2><i class="fas fa-box text-primary"></i> Empaque y Envío</h2>
-                    <button class="btn btn-primary btn-add" onclick="App.addGastoEmpaque()">
-                        <i class="fas fa-plus"></i> Agregar
-                    </button>
-                </div>
-                <div class="table-responsive">
-                    <table class="data-table" id="tablaGastosEmpaque">
-                        <thead>
-                            <tr>
-                                <th>Concepto</th>
-                                <th>Precio Unitario ($)</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
         </section>
 
         <!-- GASTOS VARIABLES -->
@@ -239,6 +218,28 @@
                                 <th>Consumo (W)</th>
                                 <th>Consumo (KW)</th>
                                 <th>Gasto x Hora ($)</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Empaque y Envío -->
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-box text-primary"></i> Empaque y Envío</h2>
+                    <button class="btn btn-primary btn-add" onclick="App.addGastoEmpaque()">
+                        <i class="fas fa-plus"></i> Agregar
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="tablaGastosEmpaque">
+                        <thead>
+                            <tr>
+                                <th>Concepto</th>
+                                <th>Precio Unitario ($)</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -575,6 +576,12 @@
                 <div id="productoServicios"></div>
                 <button class="btn btn-secondary btn-sm" onclick="App.addServicioProducto()">
                     <i class="fas fa-plus"></i> Agregar Servicio
+                </button>
+
+                <h3 class="mt-1">Descuentos por Cantidad</h3>
+                <div id="productoDescuentos"></div>
+                <button class="btn btn-secondary btn-sm" onclick="App.addDescuentoProducto()">
+                    <i class="fas fa-plus"></i> Agregar Escala
                 </button>
 
                 <div class="producto-preview">

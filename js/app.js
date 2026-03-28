@@ -15,7 +15,8 @@ let rendimientoPeriodo = 'mensual';
 // ---- Snake/Camel mapping ----
 const mapGastoEmpaque = r => ({ id: r.id, nombre: r.nombre, precioUnitario: Number(r.precio_unitario) });
 const mapServicio = r => ({ id: r.id, nombre: r.nombre, unidad: r.unidad, cantidad: r.cantidad, piezas: r.piezas, precioUnidad: Number(r.precio_unidad) });
-const mapProducto = r => ({ id: r.id, nombre: r.nombre, gramosFilamento: Number(r.gramos_filamento), materiaPrimaId: r.materia_prima_id, impresoraId: r.impresora_id, tiempoImpresion: Number(r.tiempo_impresion), tiempoTrabajo: Number(r.tiempo_trabajo), precioVenta: Number(r.precio_venta), precioMinorista: Number(r.precio_minorista), servicios: [] });
+const mapProducto = r => ({ id: r.id, nombre: r.nombre, gramosFilamento: Number(r.gramos_filamento), materiaPrimaId: r.materia_prima_id, impresoraId: r.impresora_id, tiempoImpresion: Number(r.tiempo_impresion), tiempoTrabajo: Number(r.tiempo_trabajo), precioVenta: Number(r.precio_venta), precioMinorista: Number(r.precio_minorista), servicios: [], descuentos: [] });
+const mapDescuento = r => ({ id: r.id, productoId: r.producto_id, cantidadMinima: r.cantidad_minima, precio: Number(r.precio) });
 
 const App = {
     // ---- INIT ----
@@ -30,7 +31,7 @@ const App = {
 
     async loadData() {
         try {
-            const [cfgRes, gfRes, geRes, mpRes, impRes, stRes, prodRes, psRes, ventRes, vaRes, veRes] = await Promise.all([
+            const [cfgRes, gfRes, geRes, mpRes, impRes, stRes, prodRes, psRes, pdRes, ventRes, vaRes, veRes] = await Promise.all([
                 sb.from('config').select('*').single(),
                 sb.from('gastos_fijos').select('*').order('id'),
                 sb.from('gastos_empaque').select('*').order('id'),
@@ -39,6 +40,7 @@ const App = {
                 sb.from('servicios_terceros').select('*').order('id'),
                 sb.from('productos').select('*').order('id'),
                 sb.from('producto_servicios').select('*'),
+                sb.from('producto_descuentos').select('*').order('cantidad_minima'),
                 sb.from('ventas').select('*').order('created_at', { ascending: false }),
                 sb.from('venta_articulos').select('*'),
                 sb.from('venta_empaque').select('*')
@@ -54,11 +56,13 @@ const App = {
             data.impresoras = (impRes.data || []).map(r => ({ id: r.id, nombre: r.nombre, watios: Number(r.watios) }));
             data.serviciosTerceros = (stRes.data || []).map(mapServicio);
 
-            // Products with their services
+            // Products with their services and descuentos
             const prodServs = psRes.data || [];
+            const prodDescs = pdRes.data || [];
             data.productos = (prodRes.data || []).map(r => {
                 const p = mapProducto(r);
                 p.servicios = prodServs.filter(ps => ps.producto_id === p.id).map(ps => ({ servicioId: ps.servicio_id, cantidadPiezas: ps.cantidad_piezas }));
+                p.descuentos = prodDescs.filter(d => d.producto_id === p.id).map(mapDescuento);
                 return p;
             });
 
@@ -456,12 +460,27 @@ const App = {
                 : 'Ninguno';
 
             const margenMinorista = p.precioMinorista > 0 ? (p.precioMinorista - c.costoTotal) / p.precioMinorista : 0;
-            return `<div class="producto-card">
+
+            const descuentosHtml = (p.descuentos && p.descuentos.length > 0)
+                ? `<div class="descuentos-section">
+                    <h4><i class="fas fa-tags"></i> Descuentos por Cantidad</h4>
+                    <div>${p.descuentos.sort((a, b) => a.cantidadMinima - b.cantidadMinima).map(d => `<span class="descuento-tag">+${d.cantidadMinima} u → ${this.formatMoney(d.precio)}</span>`).join('')}</div>
+                </div>` : '';
+
+            return `<div class="producto-card" onclick="this.classList.toggle('open')" data-id="${p.id}">
                 <div class="producto-card-header">
-                    <h3>${p.nombre}</h3>
-                    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
-                        <span class="producto-precio">${this.formatMoney(p.precioVenta)}<small style="font-weight:400; font-size:10px; opacity:0.7;"> MAYORISTA</small></span>
-                        <span class="producto-precio" style="background:#22C55E;">${this.formatMoney(p.precioMinorista)}<small style="font-weight:400; font-size:10px; opacity:0.7;"> MINORISTA</small></span>
+                    <div>
+                        <h3>${p.nombre}</h3>
+                        <div class="producto-card-summary">
+                            Gasto: ${this.formatMoney(c.costoTotal)} | Margen: ${this.formatPercent(c.margen)}
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+                            <span class="producto-precio">${this.formatMoney(p.precioVenta)}<small style="font-weight:400; font-size:10px; opacity:0.7;"> MAY</small></span>
+                            <span class="producto-precio" style="background:#22C55E;">${this.formatMoney(p.precioMinorista)}<small style="font-weight:400; font-size:10px; opacity:0.7;"> MIN</small></span>
+                        </div>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
                     </div>
                 </div>
                 <div class="producto-card-body">
@@ -478,6 +497,7 @@ const App = {
                         <span class="value">${this.formatMoney(c.costoTotal)}</span>
                     </div>
                 </div>
+                ${descuentosHtml}
                 <div style="display:flex;">
                     <div class="producto-margen" style="flex:1;">
                         <span class="margen-label">MAYORISTA</span>
@@ -488,7 +508,7 @@ const App = {
                         <span class="margen-value">${this.formatPercent(margenMinorista)}</span>
                     </div>
                 </div>
-                <div class="producto-card-actions">
+                <div class="producto-card-actions" onclick="event.stopPropagation()">
                     <button class="btn btn-sm btn-secondary" onclick="App.editProducto(${p.id})"><i class="fas fa-edit"></i> Editar</button>
                     <button class="btn btn-sm btn-danger" onclick="App.deleteProducto(${p.id})"><i class="fas fa-trash"></i> Eliminar</button>
                 </div>
@@ -514,6 +534,7 @@ const App = {
         document.getElementById('productoPrecioVenta').value = 0;
         document.getElementById('productoPrecioMinorista').value = 0;
         document.getElementById('productoServicios').innerHTML = '';
+        document.getElementById('productoDescuentos').innerHTML = '';
         document.getElementById('modalProductoTitulo').textContent = 'Nuevo Producto';
     },
 
@@ -546,12 +567,29 @@ const App = {
         const container = document.getElementById('productoServicios');
         container.innerHTML = '';
         if (p.servicios) p.servicios.forEach(s => this.renderServicioProductoRow(container, s.servicioId, s.cantidadPiezas));
+        const descContainer = document.getElementById('productoDescuentos');
+        descContainer.innerHTML = '';
+        if (p.descuentos) p.descuentos.forEach(d => this.renderDescuentoRow(descContainer, d.cantidadMinima, d.precio));
         setTimeout(() => this.updateProductoPreview(), 50);
     },
 
     addServicioProducto() {
         this.renderServicioProductoRow(document.getElementById('productoServicios'), data.serviciosTerceros[0]?.id || 0, 1);
         this.updateProductoPreview();
+    },
+
+    addDescuentoProducto() {
+        this.renderDescuentoRow(document.getElementById('productoDescuentos'), 0, 0);
+    },
+
+    renderDescuentoRow(container, cantidadMinima, precio) {
+        const row = document.createElement('div');
+        row.className = 'descuento-row';
+        row.innerHTML = `
+            <input type="number" class="input-field desc-cantidad" value="${cantidadMinima}" min="1" placeholder="Mín. unidades">
+            <input type="number" class="input-field desc-precio" value="${precio}" min="0" placeholder="Precio unitario">
+            <button class="btn-icon delete" onclick="this.parentElement.remove();"><i class="fas fa-times"></i></button>`;
+        container.appendChild(row);
     },
 
     renderServicioProductoRow(container, servicioId, cantidad) {
@@ -614,6 +652,12 @@ const App = {
         document.querySelectorAll('#productoServicios .servicio-row').forEach(row => {
             servicios.push({ servicioId: parseInt(row.querySelector('.servicio-select').value), cantidadPiezas: parseFloat(row.querySelector('.servicio-cantidad').value) || 1 });
         });
+        const descuentos = [];
+        document.querySelectorAll('#productoDescuentos .descuento-row').forEach(row => {
+            const cant = parseInt(row.querySelector('.desc-cantidad').value) || 0;
+            const prec = parseFloat(row.querySelector('.desc-precio').value) || 0;
+            if (cant > 0 && prec > 0) descuentos.push({ cantidadMinima: cant, precio: prec });
+        });
 
         const dbRow = {
             nombre: nombre.toUpperCase(),
@@ -632,16 +676,16 @@ const App = {
         if (editId) {
             prodId = parseInt(editId);
             await sb.from('productos').update(dbRow).eq('id', prodId);
-            // Replace servicios
             await sb.from('producto_servicios').delete().eq('producto_id', prodId);
+            await sb.from('producto_descuentos').delete().eq('producto_id', prodId);
             const idx = data.productos.findIndex(p => p.id === prodId);
             if (idx >= 0) {
-                data.productos[idx] = { ...mapProducto({ id: prodId, ...dbRow }), servicios };
+                data.productos[idx] = { ...mapProducto({ id: prodId, ...dbRow }), servicios, descuentos };
             }
         } else {
             const { data: row } = await sb.from('productos').insert(dbRow).select().single();
             prodId = row.id;
-            data.productos.push({ ...mapProducto(row), servicios });
+            data.productos.push({ ...mapProducto(row), servicios, descuentos });
         }
 
         // Insert servicios
@@ -649,6 +693,14 @@ const App = {
             await sb.from('producto_servicios').insert(servicios.map(s => ({
                 producto_id: prodId, servicio_id: s.servicioId, cantidad_piezas: s.cantidadPiezas
             })));
+        }
+        // Insert descuentos
+        if (descuentos.length > 0) {
+            const { data: insertedDescs } = await sb.from('producto_descuentos').insert(descuentos.map(d => ({
+                producto_id: prodId, cantidad_minima: d.cantidadMinima, precio: d.precio
+            }))).select();
+            const idx = data.productos.findIndex(p => p.id === prodId);
+            if (idx >= 0 && insertedDescs) data.productos[idx].descuentos = insertedDescs.map(mapDescuento);
         }
 
         this.renderProductos();
@@ -738,9 +790,15 @@ const App = {
         this.updateVentaTotal();
     },
 
-    getPrecioVenta(prod) {
+    getPrecioVenta(prod, cantidad) {
         const tipo = document.getElementById('ventaTipoVenta')?.value || 'Mayorista';
-        return tipo === 'Minorista' ? (prod.precioMinorista || prod.precioVenta) : prod.precioVenta;
+        let precio = tipo === 'Minorista' ? (prod.precioMinorista || prod.precioVenta) : prod.precioVenta;
+        // Apply quantity discount (only for mayorista)
+        if (tipo === 'Mayorista' && prod.descuentos && prod.descuentos.length > 0 && cantidad > 0) {
+            const applicable = prod.descuentos.filter(d => cantidad >= d.cantidadMinima).sort((a, b) => b.cantidadMinima - a.cantidadMinima);
+            if (applicable.length > 0) precio = applicable[0].precio;
+        }
+        return precio;
     },
 
     updateVentaTotal() {
@@ -748,7 +806,7 @@ const App = {
         document.querySelectorAll('#ventaArticulos .articulo-row').forEach(row => {
             const prod = data.productos.find(p => p.id === parseInt(row.querySelector('.art-producto').value));
             const cant = parseFloat(row.querySelector('.art-cantidad').value) || 0;
-            const precio = prod ? this.getPrecioVenta(prod) : 0;
+            const precio = prod ? this.getPrecioVenta(prod, cant) : 0;
             const sub = precio * cant;
             row.querySelector('.art-subtotal').textContent = this.formatMoney(sub);
             subtotalArt += sub;
@@ -778,8 +836,7 @@ const App = {
             const cantidad = parseFloat(row.querySelector('.art-cantidad').value) || 0;
             const prod = data.productos.find(p => p.id === productoId);
             if (prod && cantidad > 0) {
-                const tipoV = document.getElementById('ventaTipoVenta').value;
-                const precio = tipoV === 'Minorista' ? (prod.precioMinorista || prod.precioVenta) : prod.precioVenta;
+                const precio = this.getPrecioVenta(prod, cantidad);
                 articulos.push({ productoId, cantidad, precioUnitario: precio, subtotal: precio * cantidad });
                 totalArticulos += precio * cantidad;
                 cantidadTotal += cantidad;
