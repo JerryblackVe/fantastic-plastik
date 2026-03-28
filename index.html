@@ -374,6 +374,7 @@
                                 <th>Ocasión</th>
                                 <th>Pago</th>
                                 <th>Total ($)</th>
+                                <th>Estado Pago</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -516,6 +517,21 @@
                             <span>TOTAL:</span>
                             <span id="ventaTotalDisplay">$0</span>
                         </div>
+                    </div>
+                </div>
+
+                <div class="form-grid" style="margin-top:16px;">
+                    <div class="form-group">
+                        <label>Estado de Pago</label>
+                        <select id="ventaEstadoPago" class="input-field" onchange="App.toggleMontoPagado()">
+                            <option value="Completo">Pago Completo</option>
+                            <option value="Parcial">Pago Parcial</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="montoPagadoGroup" style="display:none;">
+                        <label>Monto Pagado ($)</label>
+                        <input type="number" id="ventaMontoPagado" class="input-field" value="0" min="0" oninput="App.updateSaldoDisplay()">
+                        <small id="ventaSaldoDisplay" style="color:#EF4444; font-weight:600; margin-top:4px;"></small>
                     </div>
                 </div>
             </div>

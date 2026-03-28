@@ -79,11 +79,14 @@ const App = {
                 const cantidadTotal = articulos.reduce((s, a) => s + a.cantidad, 0);
                 const totalArticulos = articulos.reduce((s, a) => s + a.subtotal, 0);
                 const totalEmpaque = empaque.reduce((s, e) => s + e.subtotal, 0);
+                const total = totalArticulos + totalEmpaque;
+                const estadoPago = v.estado_pago || 'Completo';
+                const montoPagado = v.monto_pagado != null ? Number(v.monto_pagado) : total;
                 return {
                     id: v.id, fecha: v.fecha, tipoVenta: v.tipo_venta, canal: v.canal,
                     cliente: v.cliente || '', metodoPago: v.metodo_pago || '', ocasion: v.ocasion || '',
-                    notas: v.notas || '', articulos, empaque, cantidadTotal, totalArticulos, totalEmpaque,
-                    total: totalArticulos + totalEmpaque
+                    notas: v.notas || '', estadoPago, montoPagado,
+                    articulos, empaque, cantidadTotal, totalArticulos, totalEmpaque, total
                 };
             });
 
@@ -729,6 +732,10 @@ const App = {
         document.getElementById('ventaEmpaque').innerHTML = '';
         document.getElementById('ventaTipoVenta').value = 'Mayorista';
         document.getElementById('ventaCanal').value = 'WhatsApp';
+        document.getElementById('ventaEstadoPago').value = 'Completo';
+        document.getElementById('ventaMontoPagado').value = 0;
+        document.getElementById('montoPagadoGroup').style.display = 'none';
+        document.getElementById('ventaSaldoDisplay').textContent = '';
         document.getElementById('modalVentaTitulo').textContent = 'Nueva Venta';
         this.addArticuloVenta();
         this.updateVentaTotal();
@@ -744,6 +751,9 @@ const App = {
                 document.getElementById('ventaOcasion').value = v.ocasion;
                 document.getElementById('ventaTipoVenta').value = v.tipoVenta || 'Mayorista';
                 document.getElementById('ventaCanal').value = v.canal || 'WhatsApp';
+                document.getElementById('ventaEstadoPago').value = v.estadoPago || 'Completo';
+                document.getElementById('ventaMontoPagado').value = v.montoPagado || 0;
+                this.toggleMontoPagado();
                 document.getElementById('ventaNotas').value = v.notas || '';
                 document.getElementById('ventaArticulos').innerHTML = '';
                 v.articulos.forEach(a => this.renderArticuloVentaRow(a.productoId, a.cantidad));
@@ -755,6 +765,26 @@ const App = {
     },
 
     cerrarModalVenta() { document.getElementById('modalVenta').classList.remove('active'); },
+
+    toggleMontoPagado() {
+        const estado = document.getElementById('ventaEstadoPago').value;
+        document.getElementById('montoPagadoGroup').style.display = estado === 'Parcial' ? '' : 'none';
+        if (estado === 'Completo') {
+            document.getElementById('ventaMontoPagado').value = 0;
+            document.getElementById('ventaSaldoDisplay').textContent = '';
+        }
+        this.updateSaldoDisplay();
+    },
+
+    updateSaldoDisplay() {
+        const estado = document.getElementById('ventaEstadoPago').value;
+        if (estado !== 'Parcial') return;
+        const totalText = document.getElementById('ventaTotalDisplay').textContent;
+        const total = parseFloat(totalText.replace(/[^0-9.-]/g, '').replace(/\./g, '')) || 0;
+        const pagado = parseFloat(document.getElementById('ventaMontoPagado').value) || 0;
+        const saldo = total - pagado;
+        document.getElementById('ventaSaldoDisplay').textContent = saldo > 0 ? `Saldo pendiente: ${this.formatMoney(saldo)}` : 'Pagado';
+    },
 
     addArticuloVenta() { this.renderArticuloVentaRow(data.productos[0]?.id || 0, 1); },
 
@@ -861,13 +891,17 @@ const App = {
         const metodoPago = document.getElementById('ventaMetodoPago').value;
         const ocasion = document.getElementById('ventaOcasion').value;
         const notas = document.getElementById('ventaNotas').value.trim();
+        const estadoPago = document.getElementById('ventaEstadoPago').value;
+        const total = totalArticulos + totalEmpaque;
+        const montoPagado = estadoPago === 'Completo' ? total : (parseFloat(document.getElementById('ventaMontoPagado').value) || 0);
 
         const editId = document.getElementById('ventaEditId').value;
         let ventaId;
 
         const dbVenta = {
             fecha, tipo_venta: tipoVenta, canal, total_empaque: totalEmpaque,
-            cliente, metodo_pago: metodoPago, ocasion, notas
+            cliente, metodo_pago: metodoPago, ocasion, notas,
+            estado_pago: estadoPago, monto_pagado: montoPagado
         };
 
         if (editId) {
@@ -877,12 +911,12 @@ const App = {
             await sb.from('venta_empaque').delete().eq('venta_id', ventaId);
             const idx = data.ventas.findIndex(v => v.id === ventaId);
             if (idx >= 0) {
-                data.ventas[idx] = { id: ventaId, fecha, cliente, metodoPago, ocasion, tipoVenta, canal, notas, articulos, empaque, cantidadTotal, totalArticulos, totalEmpaque, total: totalArticulos + totalEmpaque };
+                data.ventas[idx] = { id: ventaId, fecha, cliente, metodoPago, ocasion, tipoVenta, canal, notas, estadoPago, montoPagado, articulos, empaque, cantidadTotal, totalArticulos, totalEmpaque, total };
             }
         } else {
             const { data: row } = await sb.from('ventas').insert(dbVenta).select().single();
             ventaId = row.id;
-            data.ventas.unshift({ id: ventaId, fecha, cliente, metodoPago, ocasion, tipoVenta, canal, notas, articulos, empaque, cantidadTotal, totalArticulos, totalEmpaque, total: totalArticulos + totalEmpaque });
+            data.ventas.unshift({ id: ventaId, fecha, cliente, metodoPago, ocasion, tipoVenta, canal, notas, estadoPago, montoPagado, articulos, empaque, cantidadTotal, totalArticulos, totalEmpaque, total });
         }
 
         // Insert articulos
@@ -902,6 +936,32 @@ const App = {
         this.renderVentas();
         this.cerrarModalVenta();
         this.toast(editId ? 'Venta actualizada' : 'Venta registrada');
+    },
+
+    async completarPago(id) {
+        const v = data.ventas.find(vv => vv.id === id);
+        if (!v) return;
+        const saldo = v.total - v.montoPagado;
+        if (!confirm(`¿Registrar pago del saldo pendiente de ${this.formatMoney(saldo)}?`)) return;
+        v.estadoPago = 'Completo';
+        v.montoPagado = v.total;
+        await sb.from('ventas').update({ estado_pago: 'Completo', monto_pagado: v.total }).eq('id', id);
+        this.renderVentas();
+        this.toast('Pago completado');
+    },
+
+    async registrarAbono(id) {
+        const v = data.ventas.find(vv => vv.id === id);
+        if (!v) return;
+        const saldo = v.total - v.montoPagado;
+        const abono = parseFloat(prompt(`Saldo pendiente: ${this.formatMoney(saldo)}\n¿Cuánto abona?`));
+        if (!abono || abono <= 0) return;
+        const nuevoMonto = Math.min(v.montoPagado + abono, v.total);
+        v.montoPagado = nuevoMonto;
+        if (nuevoMonto >= v.total) v.estadoPago = 'Completo';
+        await sb.from('ventas').update({ estado_pago: v.estadoPago, monto_pagado: nuevoMonto }).eq('id', id);
+        this.renderVentas();
+        this.toast(v.estadoPago === 'Completo' ? 'Pago completado' : `Abono de ${this.formatMoney(abono)} registrado`);
     },
 
     async deleteVenta(id) {
@@ -956,6 +1016,18 @@ const App = {
                     <td><span class="badge">${v.ocasion}</span></td>
                     <td>${v.metodoPago}</td>
                     <td style="font-weight:600;">${this.formatMoney(v.total)}</td>
+                    <td>${v.estadoPago === 'Parcial'
+                        ? `<div style="display:flex;flex-direction:column;gap:2px;align-items:center;">
+                            <span class="badge" style="background:#FEF2F2;color:#DC2626;padding:2px 8px;border-radius:10px;font-size:11px;">Parcial</span>
+                            <span style="font-size:10px;color:#888;">Pagó ${this.formatMoney(v.montoPagado)}</span>
+                            <span style="font-size:10px;color:#DC2626;font-weight:600;">Debe ${this.formatMoney(v.total - v.montoPagado)}</span>
+                            <div style="display:flex;gap:3px;">
+                            <button class="btn btn-sm" style="font-size:9px;padding:2px 5px;background:#3B82F6;color:#fff;border:none;border-radius:6px;cursor:pointer;" onclick="event.stopPropagation();App.registrarAbono(${v.id})">Abonar</button>
+                            <button class="btn btn-sm" style="font-size:9px;padding:2px 5px;background:#22C55E;color:#fff;border:none;border-radius:6px;cursor:pointer;" onclick="event.stopPropagation();App.completarPago(${v.id})">Saldar</button>
+                            </div>
+                          </div>`
+                        : `<span class="badge" style="background:#E8F5E9;color:#2E7D32;padding:2px 8px;border-radius:10px;font-size:11px;">Completo</span>`
+                    }</td>
                     <td>
                         <button class="btn-icon edit" onclick="App.abrirModalVenta(${v.id})"><i class="fas fa-edit"></i></button>
                         <button class="btn-icon delete" onclick="App.deleteVenta(${v.id})"><i class="fas fa-trash"></i></button>
