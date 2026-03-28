@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fantastic Plastik - Gestión de Negocio</title>
+    <link rel="icon" href="assets/monograma-naranja.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <img src="assets/logo-negro.png" alt="Fantastic Plastik" class="sidebar-logo">
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-section="rendimiento">
+                <i class="fas fa-chart-line"></i>
+                <span>Rendimiento</span>
+            </a>
+            <a href="#" class="nav-item" data-section="gastos-fijos">
+                <i class="fas fa-building"></i>
+                <span>Gastos Fijos</span>
+            </a>
+            <a href="#" class="nav-item" data-section="gastos-variables">
+                <i class="fas fa-bolt"></i>
+                <span>Gastos Variables</span>
+            </a>
+            <a href="#" class="nav-item" data-section="productos">
+                <i class="fas fa-box-open"></i>
+                <span>Productos</span>
+            </a>
+            <a href="#" class="nav-item" data-section="ventas">
+                <i class="fas fa-cash-register"></i>
+                <span>Ventas</span>
+            </a>
+            <a href="#" class="nav-item" data-section="exportar">
+                <i class="fas fa-file-export"></i>
+                <span>Exportar</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <small>Fantastic Plastik &copy; 2026</small>
+        </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <button class="menu-toggle" id="menuToggle">
+            <i class="fas fa-bars"></i>
+        </button>
+        <img src="assets/logo-negro.png" alt="Fantastic Plastik" class="mobile-logo">
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+
+        <!-- RENDIMIENTO (Home) -->
+        <section class="section active" id="section-rendimiento">
+            <div class="section-header">
+                <h1>Rendimiento</h1>
+                <p class="section-subtitle">Análisis de tu negocio</p>
+            </div>
+
+            <div class="toggle-period">
+                <button class="btn btn-toggle active" data-period="mensual" onclick="App.toggleRendimiento('mensual')">Mensual</button>
+                <button class="btn btn-toggle" data-period="anual" onclick="App.toggleRendimiento('anual')">Anual</button>
+            </div>
+
+            <div class="kpi-grid" id="rendimientoKPIs"></div>
+
+            <div class="dashboard-charts">
+                <div class="chart-card">
+                    <h3>Ingresos vs Gastos</h3>
+                    <canvas id="chartIngresosGastos"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Ventas por Producto</h3>
+                    <canvas id="chartVentasProducto"></canvas>
+                </div>
+            </div>
+            <div class="dashboard-charts">
+                <div class="chart-card">
+                    <h3>Ventas por Ocasión</h3>
+                    <canvas id="chartVentasOcasion"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Top Clientes</h3>
+                    <div id="topClientes" class="top-list"></div>
+                </div>
+            </div>
+
+            <!-- Punto de Equilibrio integrado -->
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-balance-scale text-warning"></i> Punto de Equilibrio</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="tablaEquilibrio">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Costo Unitario ($)</th>
+                                <th>Precio Venta ($)</th>
+                                <th>Margen Unitario ($)</th>
+                                <th>% Margen</th>
+                                <th>Unidades p/ Equilibrio</th>
+                                <th>Ventas p/ Equilibrio ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- GASTOS FIJOS -->
+        <section class="section" id="section-gastos-fijos">
+            <div class="section-header">
+                <h1>Gastos Fijos</h1>
+                <p class="section-subtitle">Gastos fijos mensuales del negocio</p>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-receipt text-danger"></i> Gastos Operativos</h2>
+                    <button class="btn btn-primary btn-add" onclick="App.addGastoFijo()">
+                        <i class="fas fa-plus"></i> Agregar
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="tablaGastosFijos">
+                        <thead>
+                            <tr>
+                                <th>Concepto</th>
+                                <th>Monto Mensual ($)</th>
+                                <th>% del Total</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                        <tfoot>
+                            <tr class="total-row">
+                                <td><strong>TOTAL OPERATIVOS</strong></td>
+                                <td id="totalGastosFijos"><strong>$0</strong></td>
+                                <td><strong>100%</strong></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Empaque y Envío -->
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-box text-primary"></i> Empaque y Envío</h2>
+                    <button class="btn btn-primary btn-add" onclick="App.addGastoEmpaque()">
+                        <i class="fas fa-plus"></i> Agregar
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="tablaGastosEmpaque">
+                        <thead>
+                            <tr>
+                                <th>Concepto</th>
+                                <th>Precio Unitario ($)</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- GASTOS VARIABLES -->
+        <section class="section" id="section-gastos-variables">
+            <div class="section-header">
+                <h1>Gastos Variables</h1>
+                <p class="section-subtitle">Electricidad, materias primas, impresoras y servicios terceros</p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-bolt text-warning"></i> Gasto Eléctrico</h2>
+                </div>
+                <div class="inline-form">
+                    <label>Precio por KWH ($):</label>
+                    <input type="number" id="precioKWH" class="input-field" value="160" onchange="App.updatePrecioKWH(this.value)">
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-cubes text-primary"></i> Materias Primas</h2>
+                    <button class="btn btn-primary btn-add" onclick="App.addMateriaPrima()">
+                        <i class="fas fa-plus"></i> Agregar
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="tablaMateriasPrimas">
+                        <thead>
+                            <tr>
+                                <th>Material</th>
+                                <th>Unidad</th>
+                                <th>Precio x Unidad ($)</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-user-clock text-success"></i> Gasto de Trabajo</h2>
+                </div>
+                <div class="inline-form">
+                    <label>Gasto por minuto ($):</label>
+                    <input type="number" step="0.01" id="costoTrabajo" class="input-field" value="33.33" onchange="App.updateCostoTrabajo(this.value)">
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-print text-info"></i> Impresoras 3D</h2>
+                    <button class="btn btn-primary btn-add" onclick="App.addImpresora()">
+                        <i class="fas fa-plus"></i> Agregar
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="tablaImpresoras">
+                        <thead>
+                            <tr>
+                                <th>Impresora</th>
+                                <th>Consumo (W)</th>
+                                <th>Consumo (KW)</th>
+                                <th>Gasto x Hora ($)</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-handshake text-purple"></i> Servicios Terceros y Productos</h2>
+                    <button class="btn btn-primary btn-add" onclick="App.addServicioTercero()">
+                        <i class="fas fa-plus"></i> Agregar
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="tablaServicios">
+                        <thead>
+                            <tr>
+                                <th>Servicio/Producto</th>
+                                <th>Unidad</th>
+                                <th>Cantidad</th>
+                                <th>Piezas</th>
+                                <th>Precio x Unidad ($)</th>
+                                <th>Precio x Pieza ($)</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- PRODUCTOS -->
+        <section class="section" id="section-productos">
+            <div class="section-header">
+                <h1>Productos</h1>
+                <p class="section-subtitle">Calculadora de gastos por producto</p>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h2>Catálogo de Productos</h2>
+                    <button class="btn btn-primary btn-add" onclick="App.addProducto()">
+                        <i class="fas fa-plus"></i> Nuevo Producto
+                    </button>
+                </div>
+            </div>
+            <div class="productos-grid" id="productosGrid"></div>
+        </section>
+
+        <!-- VENTAS -->
+        <section class="section" id="section-ventas">
+            <div class="section-header">
+                <h1>Ventas</h1>
+                <p class="section-subtitle">Registro de ventas por mes</p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Filtros</h2>
+                </div>
+                <div class="filtros-ventas">
+                    <div class="filtro-group">
+                        <label>Mes:</label>
+                        <input type="month" id="filtroMes" class="input-field" onchange="App.filtrarVentas()">
+                    </div>
+                    <div class="filtro-group">
+                        <label>Método de Pago:</label>
+                        <select id="filtroMetodo" class="input-field" onchange="App.filtrarVentas()">
+                            <option value="">Todos</option>
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Transferencia">Transferencia</option>
+                            <option value="Tarjeta Débito">Tarjeta Débito</option>
+                            <option value="Tarjeta Crédito">Tarjeta Crédito</option>
+                            <option value="MercadoPago">MercadoPago</option>
+                        </select>
+                    </div>
+                    <div class="filtro-group">
+                        <label>Ocasión:</label>
+                        <select id="filtroOcasion" class="input-field" onchange="App.filtrarVentas()">
+                            <option value="">Todas</option>
+                            <option value="Boda">Boda</option>
+                            <option value="Quinceañera">Quinceañera</option>
+                            <option value="Emprendimiento">Emprendimiento</option>
+                            <option value="Evento Privado">Evento Privado</option>
+                            <option value="Festival">Festival</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
+                    <div class="filtro-group">
+                        <label>Tipo:</label>
+                        <select id="filtroTipo" class="input-field" onchange="App.filtrarVentas()">
+                            <option value="">Todos</option>
+                            <option value="Mayorista">Mayorista</option>
+                            <option value="Minorista">Minorista</option>
+                        </select>
+                    </div>
+                    <div class="filtro-group">
+                        <label>Canal:</label>
+                        <select id="filtroCanal" class="input-field" onchange="App.filtrarVentas()">
+                            <option value="">Todos</option>
+                            <option value="WhatsApp">WhatsApp</option>
+                            <option value="MercadoLibre">MercadoLibre</option>
+                            <option value="Facebook Ads">Facebook Ads</option>
+                            <option value="Particular">Particular</option>
+                            <option value="Directo">Directo</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kpi-grid kpi-grid-4" id="ventasKPIs"></div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Registro de Ventas</h2>
+                    <button class="btn btn-primary btn-add" onclick="App.abrirModalVenta()">
+                        <i class="fas fa-plus"></i> Nueva Venta
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="tablaVentas">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Cliente</th>
+                                <th>Artículos</th>
+                                <th>Cant.</th>
+                                <th>Tipo</th>
+                                <th>Canal</th>
+                                <th>Ocasión</th>
+                                <th>Pago</th>
+                                <th>Total ($)</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="empty-state" id="ventasEmpty">
+                    <i class="fas fa-receipt"></i>
+                    <p>No hay ventas registradas. Haz clic en "+ Nueva Venta" para comenzar.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- EXPORTAR -->
+        <section class="section" id="section-exportar">
+            <div class="section-header">
+                <h1>Exportar Datos</h1>
+                <p class="section-subtitle">Descarga tus datos en Excel o PDF</p>
+            </div>
+            <div class="export-grid">
+                <div class="export-card" onclick="App.exportarExcel('todo')">
+                    <div class="export-icon excel"><i class="fas fa-file-excel"></i></div>
+                    <h3>Exportar Todo a Excel</h3>
+                    <p>Gastos, productos, ventas y rendimiento</p>
+                </div>
+                <div class="export-card" onclick="App.exportarExcel('ventas')">
+                    <div class="export-icon excel"><i class="fas fa-file-excel"></i></div>
+                    <h3>Exportar Ventas a Excel</h3>
+                    <p>Registro detallado de todas las ventas</p>
+                </div>
+                <div class="export-card" onclick="App.exportarExcel('productos')">
+                    <div class="export-icon excel"><i class="fas fa-file-excel"></i></div>
+                    <h3>Exportar Productos a Excel</h3>
+                    <p>Catálogo con gastos y márgenes</p>
+                </div>
+                <div class="export-card" onclick="App.exportarPDF()">
+                    <div class="export-icon pdf"><i class="fas fa-file-pdf"></i></div>
+                    <h3>Reporte PDF</h3>
+                    <p>Resumen ejecutivo con gráficos</p>
+                </div>
+                <div class="export-card" onclick="App.exportarListaPreciosPDF()">
+                    <div class="export-icon pdf"><i class="fas fa-tags"></i></div>
+                    <h3>Lista de Precios PDF</h3>
+                    <p>Catálogo con precios mayorista y minorista</p>
+                </div>
+                <div class="export-card" onclick="App.exportarListaPreciosMD()">
+                    <div class="export-icon md"><i class="fas fa-file-alt"></i></div>
+                    <h3>Lista de Precios MD</h3>
+                    <p>Formato Markdown para compartir</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal Nueva Venta -->
+    <div class="modal-overlay" id="modalVenta">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h2 id="modalVentaTitulo">Nueva Venta</h2>
+                <button class="modal-close" onclick="App.cerrarModalVenta()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="ventaEditId">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Fecha</label>
+                        <input type="date" id="ventaFecha" class="input-field" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Cliente</label>
+                        <input type="text" id="ventaCliente" class="input-field" placeholder="Nombre del cliente" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Método de Pago</label>
+                        <select id="ventaMetodoPago" class="input-field">
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Transferencia">Transferencia</option>
+                            <option value="Tarjeta Débito">Tarjeta Débito</option>
+                            <option value="Tarjeta Crédito">Tarjeta Crédito</option>
+                            <option value="MercadoPago">MercadoPago</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Ocasión</label>
+                        <select id="ventaOcasion" class="input-field">
+                            <option value="Boda">Boda</option>
+                            <option value="Quinceañera">Quinceañera</option>
+                            <option value="Emprendimiento">Emprendimiento</option>
+                            <option value="Evento Privado">Evento Privado</option>
+                            <option value="Festival">Festival</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo de Venta</label>
+                        <select id="ventaTipoVenta" class="input-field" onchange="App.updateVentaTotal()">
+                            <option value="Mayorista">Mayorista</option>
+                            <option value="Minorista">Minorista</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Canal de Venta</label>
+                        <select id="ventaCanal" class="input-field">
+                            <option value="WhatsApp">WhatsApp</option>
+                            <option value="MercadoLibre">MercadoLibre</option>
+                            <option value="Facebook Ads">Facebook Ads</option>
+                            <option value="Particular">Particular</option>
+                            <option value="Directo">Directo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notas</label>
+                    <textarea id="ventaNotas" class="input-field" rows="2" placeholder="Observaciones opcionales..."></textarea>
+                </div>
+
+                <h3 class="mt-1">Artículos</h3>
+                <div id="ventaArticulos"></div>
+                <button class="btn btn-secondary btn-sm" onclick="App.addArticuloVenta()">
+                    <i class="fas fa-plus"></i> Agregar Artículo
+                </button>
+
+                <h3 class="mt-1"><i class="fas fa-box text-primary"></i> Empaque y Envío</h3>
+                <div id="ventaEmpaque"></div>
+                <button class="btn btn-secondary btn-sm" onclick="App.addEmpaqueVenta()">
+                    <i class="fas fa-plus"></i> Agregar Empaque
+                </button>
+
+                <div class="venta-total">
+                    <div style="display:flex; flex-direction:column; gap:4px; flex:1;">
+                        <div style="display:flex; justify-content:space-between; font-size:14px; color:#888;">
+                            <span>Subtotal Artículos:</span>
+                            <span id="ventaSubtotalArticulos">$0</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:14px; color:#888;">
+                            <span>Gasto Empaque:</span>
+                            <span id="ventaSubtotalEmpaque">$0</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:18px; font-weight:700; border-top:1px solid #ddd; padding-top:8px;">
+                            <span>TOTAL:</span>
+                            <span id="ventaTotalDisplay">$0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="App.cerrarModalVenta()">Cancelar</button>
+                <button class="btn btn-primary" onclick="App.guardarVenta()">
+                    <i class="fas fa-save"></i> Guardar Venta
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Producto -->
+    <div class="modal-overlay" id="modalProducto">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h2 id="modalProductoTitulo">Nuevo Producto</h2>
+                <button class="modal-close" onclick="App.cerrarModalProducto()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="productoEditId">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Nombre del Producto</label>
+                        <input type="text" id="productoNombre" class="input-field" placeholder="Ej: Abanico de Polímero">
+                    </div>
+                    <div class="form-group">
+                        <label>Materia Prima</label>
+                        <select id="productoMateria" class="input-field"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Gramos de Filamento</label>
+                        <input type="number" id="productoGramos" class="input-field" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Impresora</label>
+                        <select id="productoImpresora" class="input-field"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tiempo Impresión (min)</label>
+                        <input type="number" id="productoTiempoImpresion" class="input-field" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Tiempo Trabajo (min)</label>
+                        <input type="number" id="productoTiempoTrabajo" class="input-field" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Precio Mayorista ($)</label>
+                        <input type="number" id="productoPrecioVenta" class="input-field" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Precio Minorista ($)</label>
+                        <input type="number" id="productoPrecioMinorista" class="input-field" value="0">
+                    </div>
+                </div>
+
+                <h3 class="mt-1">Servicios/Productos Terceros</h3>
+                <div id="productoServicios"></div>
+                <button class="btn btn-secondary btn-sm" onclick="App.addServicioProducto()">
+                    <i class="fas fa-plus"></i> Agregar Servicio
+                </button>
+
+                <div class="producto-preview">
+                    <h3>Vista Previa de Gastos</h3>
+                    <div id="productoPreviewCostos"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="App.cerrarModalProducto()">Cancelar</button>
+                <button class="btn btn-primary" onclick="App.guardarProducto()">
+                    <i class="fas fa-save"></i> Guardar Producto
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
