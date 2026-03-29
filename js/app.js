@@ -801,15 +801,9 @@ const App = {
             <select class="input-field art-producto" onchange="App.onArticuloChange(this)">
                 ${data.productos.map(p => `<option value="${p.id}" ${p.id === productoId ? 'selected' : ''}>${p.nombre}</option>`).join('')}
             </select>
-            <div style="display:flex; flex-direction:column; gap:2px;">
-                <small style="color:#888; font-size:10px;">Cant.</small>
-                <input type="number" class="input-field art-cantidad" value="${cantidad}" min="1" style="width:70px;" onchange="App.onArticuloCantidadChange(this)" oninput="App.onArticuloCantidadChange(this)">
-            </div>
-            <div style="display:flex; flex-direction:column; gap:2px;">
-                <small style="color:#F59E0B; font-size:10px;">💲 Precio (editable)</small>
-                <input type="number" class="input-field art-precio" value="${precioOverride || 0}" min="0" style="width:100px; border:2px solid #F59E0B; border-radius:6px; font-weight:600;" onchange="App.updateVentaTotal()" oninput="App.updateVentaTotal()">
-            </div>
-            <span class="art-subtotal" style="font-weight:600; font-size:13px; text-align:right; min-width:70px;"></span>
+            <input type="number" class="input-field art-cantidad" value="${cantidad}" min="1" onchange="App.onArticuloCantidadChange(this)" oninput="App.onArticuloCantidadChange(this)">
+            <input type="number" class="input-field art-precio" value="${precioOverride || 0}" min="0" style="border:2px solid #F59E0B; font-weight:600;" onchange="App.updateVentaTotal()" oninput="App.updateVentaTotal()">
+            <span class="art-subtotal" style="font-weight:700; font-size:13px; text-align:right;"></span>
             <button class="btn-icon delete" onclick="this.parentElement.remove(); App.updateVentaTotal();"><i class="fas fa-times"></i></button>`;
         container.appendChild(row);
         // Set initial price
