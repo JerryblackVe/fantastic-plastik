@@ -756,7 +756,7 @@ const App = {
                 this.toggleMontoPagado();
                 document.getElementById('ventaNotas').value = v.notas || '';
                 document.getElementById('ventaArticulos').innerHTML = '';
-                v.articulos.forEach(a => this.renderArticuloVentaRow(a.productoId, a.cantidad, v.tipoVenta === 'Otro' ? a.precioUnitario : null));
+                v.articulos.forEach(a => this.renderArticuloVentaRow(a.productoId, a.cantidad, a.precioUnitario));
                 document.getElementById('ventaEmpaque').innerHTML = '';
                 if (v.empaque) v.empaque.forEach(e => this.renderEmpaqueVentaRow(e.empaqueId, e.cantidad));
                 this.updateVentaTotal();
@@ -789,27 +789,46 @@ const App = {
     addArticuloVenta() { this.renderArticuloVentaRow(data.productos[0]?.id || 0, 1, null); },
 
     onTipoVentaChange() {
-        const tipo = document.getElementById('ventaTipoVenta').value;
-        document.querySelectorAll('#ventaArticulos .art-precio-custom').forEach(el => {
-            el.style.display = tipo === 'Otro' ? '' : 'none';
-        });
+        document.querySelectorAll('#ventaArticulos .articulo-row').forEach(row => this.syncArticuloPrecio(row));
         this.updateVentaTotal();
     },
 
-    renderArticuloVentaRow(productoId, cantidad, precioCustom) {
+    renderArticuloVentaRow(productoId, cantidad, precioOverride) {
         const container = document.getElementById('ventaArticulos');
-        const tipo = document.getElementById('ventaTipoVenta').value;
         const row = document.createElement('div');
         row.className = 'articulo-row';
         row.innerHTML = `
-            <select class="input-field art-producto" onchange="App.updateVentaTotal()">
+            <select class="input-field art-producto" onchange="App.onArticuloChange(this)">
                 ${data.productos.map(p => `<option value="${p.id}" ${p.id === productoId ? 'selected' : ''}>${p.nombre}</option>`).join('')}
             </select>
-            <input type="number" class="input-field art-cantidad" value="${cantidad}" min="1" onchange="App.updateVentaTotal()" oninput="App.updateVentaTotal()">
-            <input type="number" class="input-field art-precio-custom" value="${precioCustom || 0}" min="0" placeholder="Precio" onchange="App.updateVentaTotal()" oninput="App.updateVentaTotal()" style="display:${tipo === 'Otro' ? '' : 'none'}; width:100px;">
-            <span class="art-subtotal" style="font-weight:600; font-size:13px; text-align:right;"></span>
+            <input type="number" class="input-field art-cantidad" value="${cantidad}" min="1" onchange="App.onArticuloCantidadChange(this)" oninput="App.onArticuloCantidadChange(this)">
+            <input type="number" class="input-field art-precio" value="${precioOverride || 0}" min="0" style="width:90px;" onchange="App.updateVentaTotal()" oninput="App.updateVentaTotal()">
+            <span class="art-subtotal" style="font-weight:600; font-size:13px; text-align:right; min-width:70px;"></span>
             <button class="btn-icon delete" onclick="this.parentElement.remove(); App.updateVentaTotal();"><i class="fas fa-times"></i></button>`;
         container.appendChild(row);
+        // Set initial price
+        if (!precioOverride) this.syncArticuloPrecio(row);
+        this.updateVentaTotal();
+    },
+
+    syncArticuloPrecio(row) {
+        const prod = data.productos.find(p => p.id === parseInt(row.querySelector('.art-producto').value));
+        const cant = parseFloat(row.querySelector('.art-cantidad').value) || 0;
+        if (prod) {
+            const precio = this.getPrecioVenta(prod, cant);
+            row.querySelector('.art-precio').value = precio;
+        }
+    },
+
+    onArticuloChange(select) {
+        const row = select.closest('.articulo-row');
+        this.syncArticuloPrecio(row);
+        this.updateVentaTotal();
+    },
+
+    onArticuloCantidadChange(input) {
+        const row = input.closest('.articulo-row');
+        this.syncArticuloPrecio(row);
         this.updateVentaTotal();
     },
 
@@ -842,17 +861,10 @@ const App = {
     },
 
     updateVentaTotal() {
-        const tipo = document.getElementById('ventaTipoVenta').value;
         let subtotalArt = 0;
         document.querySelectorAll('#ventaArticulos .articulo-row').forEach(row => {
-            const prod = data.productos.find(p => p.id === parseInt(row.querySelector('.art-producto').value));
             const cant = parseFloat(row.querySelector('.art-cantidad').value) || 0;
-            let precio;
-            if (tipo === 'Otro') {
-                precio = parseFloat(row.querySelector('.art-precio-custom').value) || 0;
-            } else {
-                precio = prod ? this.getPrecioVenta(prod, cant) : 0;
-            }
+            const precio = parseFloat(row.querySelector('.art-precio').value) || 0;
             const sub = precio * cant;
             row.querySelector('.art-subtotal').textContent = this.formatMoney(sub);
             subtotalArt += sub;
@@ -882,9 +894,7 @@ const App = {
             const cantidad = parseFloat(row.querySelector('.art-cantidad').value) || 0;
             const prod = data.productos.find(p => p.id === productoId);
             if (prod && cantidad > 0) {
-                const precio = tipoVenta === 'Otro'
-                    ? (parseFloat(row.querySelector('.art-precio-custom').value) || 0)
-                    : this.getPrecioVenta(prod, cantidad);
+                const precio = parseFloat(row.querySelector('.art-precio').value) || 0;
                 articulos.push({ productoId, cantidad, precioUnitario: precio, subtotal: precio * cantidad });
                 totalArticulos += precio * cantidad;
                 cantidadTotal += cantidad;
