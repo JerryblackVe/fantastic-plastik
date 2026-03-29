@@ -883,87 +883,98 @@ const App = {
     },
 
     async guardarVenta() {
-        const fecha = document.getElementById('ventaFecha').value;
-        const cliente = document.getElementById('ventaCliente').value.trim();
-        if (!fecha || !cliente) { this.toast('Completa fecha y cliente', 'error'); return; }
+        try {
+            const fecha = document.getElementById('ventaFecha').value;
+            const cliente = document.getElementById('ventaCliente').value.trim();
+            if (!fecha || !cliente) { this.toast('Completa fecha y cliente', 'error'); return; }
 
-        const articulos = [];
-        let totalArticulos = 0, cantidadTotal = 0;
-        document.querySelectorAll('#ventaArticulos .articulo-row').forEach(row => {
-            const productoId = parseInt(row.querySelector('.art-producto').value);
-            const cantidad = parseFloat(row.querySelector('.art-cantidad').value) || 0;
-            const prod = data.productos.find(p => p.id === productoId);
-            if (prod && cantidad > 0) {
-                const precio = parseFloat(row.querySelector('.art-precio').value) || 0;
-                articulos.push({ productoId, cantidad, precioUnitario: precio, subtotal: precio * cantidad });
-                totalArticulos += precio * cantidad;
-                cantidadTotal += cantidad;
+            const articulos = [];
+            let totalArticulos = 0, cantidadTotal = 0;
+            document.querySelectorAll('#ventaArticulos .articulo-row').forEach(row => {
+                const productoId = parseInt(row.querySelector('.art-producto').value);
+                const cantidad = parseFloat(row.querySelector('.art-cantidad').value) || 0;
+                const prod = data.productos.find(p => p.id === productoId);
+                if (prod && cantidad > 0) {
+                    const precio = parseFloat(row.querySelector('.art-precio').value) || 0;
+                    articulos.push({ productoId, cantidad, precioUnitario: precio, subtotal: precio * cantidad });
+                    totalArticulos += precio * cantidad;
+                    cantidadTotal += cantidad;
+                }
+            });
+            if (articulos.length === 0) { this.toast('Agrega al menos un artículo', 'error'); return; }
+
+            const empaque = [];
+            let totalEmpaque = 0;
+            document.querySelectorAll('#ventaEmpaque .articulo-row').forEach(row => {
+                const empaqueId = parseInt(row.querySelector('.emp-item').value);
+                const cantidad = parseFloat(row.querySelector('.emp-cantidad').value) || 0;
+                const emp = data.gastosEmpaque.find(e => e.id === empaqueId);
+                if (emp && cantidad > 0) {
+                    empaque.push({ empaqueId, cantidad, precioUnitario: emp.precioUnitario, subtotal: emp.precioUnitario * cantidad });
+                    totalEmpaque += emp.precioUnitario * cantidad;
+                }
+            });
+
+            const tipoVenta = document.getElementById('ventaTipoVenta').value;
+            const canal = document.getElementById('ventaCanal').value;
+            const metodoPago = document.getElementById('ventaMetodoPago').value;
+            const ocasion = document.getElementById('ventaOcasion').value;
+            const notas = document.getElementById('ventaNotas').value.trim();
+            const estadoPago = document.getElementById('ventaEstadoPago').value;
+            const total = totalArticulos + totalEmpaque;
+            const montoPagado = estadoPago === 'Completo' ? total : (parseFloat(document.getElementById('ventaMontoPagado').value) || 0);
+
+            const editId = document.getElementById('ventaEditId').value;
+            let ventaId;
+
+            const dbVenta = {
+                fecha, tipo_venta: tipoVenta, canal, total_empaque: totalEmpaque,
+                cliente, metodo_pago: metodoPago, ocasion, notas,
+                estado_pago: estadoPago, monto_pagado: montoPagado
+            };
+
+            if (editId) {
+                ventaId = parseInt(editId);
+                const { error: updErr } = await sb.from('ventas').update(dbVenta).eq('id', ventaId);
+                if (updErr) throw updErr;
+                const { error: delArtErr } = await sb.from('venta_articulos').delete().eq('venta_id', ventaId);
+                if (delArtErr) throw delArtErr;
+                const { error: delEmpErr } = await sb.from('venta_empaque').delete().eq('venta_id', ventaId);
+                if (delEmpErr) throw delEmpErr;
+                const idx = data.ventas.findIndex(v => v.id === ventaId);
+                if (idx >= 0) {
+                    data.ventas[idx] = { id: ventaId, fecha, cliente, metodoPago, ocasion, tipoVenta, canal, notas, estadoPago, montoPagado, articulos, empaque, cantidadTotal, totalArticulos, totalEmpaque, total };
+                }
+            } else {
+                const { data: row, error: insErr } = await sb.from('ventas').insert(dbVenta).select().single();
+                if (insErr) throw insErr;
+                ventaId = row.id;
+                data.ventas.unshift({ id: ventaId, fecha, cliente, metodoPago, ocasion, tipoVenta, canal, notas, estadoPago, montoPagado, articulos, empaque, cantidadTotal, totalArticulos, totalEmpaque, total });
             }
-        });
-        if (articulos.length === 0) { this.toast('Agrega al menos un artículo', 'error'); return; }
 
-        const empaque = [];
-        let totalEmpaque = 0;
-        document.querySelectorAll('#ventaEmpaque .articulo-row').forEach(row => {
-            const empaqueId = parseInt(row.querySelector('.emp-item').value);
-            const cantidad = parseFloat(row.querySelector('.emp-cantidad').value) || 0;
-            const emp = data.gastosEmpaque.find(e => e.id === empaqueId);
-            if (emp && cantidad > 0) {
-                empaque.push({ empaqueId, cantidad, precioUnitario: emp.precioUnitario, subtotal: emp.precioUnitario * cantidad });
-                totalEmpaque += emp.precioUnitario * cantidad;
+            // Insert articulos
+            if (articulos.length > 0) {
+                const { error: artErr } = await sb.from('venta_articulos').insert(articulos.map(a => ({
+                    venta_id: ventaId, producto_id: a.productoId, cantidad: a.cantidad,
+                    precio_unitario: a.precioUnitario, subtotal: a.subtotal
+                })));
+                if (artErr) throw artErr;
             }
-        });
-
-        const tipoVenta = document.getElementById('ventaTipoVenta').value;
-        const canal = document.getElementById('ventaCanal').value;
-        const metodoPago = document.getElementById('ventaMetodoPago').value;
-        const ocasion = document.getElementById('ventaOcasion').value;
-        const notas = document.getElementById('ventaNotas').value.trim();
-        const estadoPago = document.getElementById('ventaEstadoPago').value;
-        const total = totalArticulos + totalEmpaque;
-        const montoPagado = estadoPago === 'Completo' ? total : (parseFloat(document.getElementById('ventaMontoPagado').value) || 0);
-
-        const editId = document.getElementById('ventaEditId').value;
-        let ventaId;
-
-        const dbVenta = {
-            fecha, tipo_venta: tipoVenta, canal, total_empaque: totalEmpaque,
-            cliente, metodo_pago: metodoPago, ocasion, notas,
-            estado_pago: estadoPago, monto_pagado: montoPagado
-        };
-
-        if (editId) {
-            ventaId = parseInt(editId);
-            await sb.from('ventas').update(dbVenta).eq('id', ventaId);
-            await sb.from('venta_articulos').delete().eq('venta_id', ventaId);
-            await sb.from('venta_empaque').delete().eq('venta_id', ventaId);
-            const idx = data.ventas.findIndex(v => v.id === ventaId);
-            if (idx >= 0) {
-                data.ventas[idx] = { id: ventaId, fecha, cliente, metodoPago, ocasion, tipoVenta, canal, notas, estadoPago, montoPagado, articulos, empaque, cantidadTotal, totalArticulos, totalEmpaque, total };
+            // Insert empaque
+            if (empaque.length > 0) {
+                const { error: empErr } = await sb.from('venta_empaque').insert(empaque.map(e => ({
+                    venta_id: ventaId, empaque_id: e.empaqueId, cantidad: e.cantidad, subtotal: e.subtotal
+                })));
+                if (empErr) throw empErr;
             }
-        } else {
-            const { data: row } = await sb.from('ventas').insert(dbVenta).select().single();
-            ventaId = row.id;
-            data.ventas.unshift({ id: ventaId, fecha, cliente, metodoPago, ocasion, tipoVenta, canal, notas, estadoPago, montoPagado, articulos, empaque, cantidadTotal, totalArticulos, totalEmpaque, total });
-        }
 
-        // Insert articulos
-        if (articulos.length > 0) {
-            await sb.from('venta_articulos').insert(articulos.map(a => ({
-                venta_id: ventaId, producto_id: a.productoId, cantidad: a.cantidad,
-                precio_unitario: a.precioUnitario, subtotal: a.subtotal
-            })));
+            this.renderVentas();
+            this.cerrarModalVenta();
+            this.toast(editId ? 'Venta actualizada' : 'Venta registrada');
+        } catch (err) {
+            console.error('Error guardando venta:', err);
+            this.toast('Error al guardar venta: ' + (err.message || err.details || JSON.stringify(err)), 'error');
         }
-        // Insert empaque
-        if (empaque.length > 0) {
-            await sb.from('venta_empaque').insert(empaque.map(e => ({
-                venta_id: ventaId, empaque_id: e.empaqueId, cantidad: e.cantidad, subtotal: e.subtotal
-            })));
-        }
-
-        this.renderVentas();
-        this.cerrarModalVenta();
-        this.toast(editId ? 'Venta actualizada' : 'Venta registrada');
     },
 
     async completarPago(id) {
