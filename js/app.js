@@ -86,6 +86,7 @@ const App = {
                     id: v.id, fecha: v.fecha, tipoVenta: v.tipo_venta, canal: v.canal,
                     cliente: v.cliente || '', metodoPago: v.metodo_pago || '', ocasion: v.ocasion || '',
                     notas: v.notas || '', estadoPago, montoPagado,
+                    cuentaDestino: v.cuenta_destino || 'Efectivo - Caja',
                     articulos, empaque, cantidadTotal, totalArticulos, totalEmpaque, total
                 };
             });
@@ -732,6 +733,7 @@ const App = {
         document.getElementById('ventaEmpaque').innerHTML = '';
         document.getElementById('ventaTipoVenta').value = 'Mayorista';
         document.getElementById('ventaCanal').value = 'WhatsApp';
+        document.getElementById('ventaCuentaDestino').value = 'Efectivo - Caja';
         document.getElementById('ventaEstadoPago').value = 'Completo';
         document.getElementById('ventaMontoPagado').value = 0;
         document.getElementById('montoPagadoGroup').style.display = 'none';
@@ -748,6 +750,7 @@ const App = {
                 document.getElementById('ventaFecha').value = v.fecha;
                 document.getElementById('ventaCliente').value = v.cliente;
                 document.getElementById('ventaMetodoPago').value = v.metodoPago;
+                document.getElementById('ventaCuentaDestino').value = v.cuentaDestino || 'Efectivo - Caja';
                 document.getElementById('ventaOcasion').value = v.ocasion;
                 document.getElementById('ventaTipoVenta').value = v.tipoVenta || 'Mayorista';
                 document.getElementById('ventaCanal').value = v.canal || 'WhatsApp';
@@ -765,6 +768,19 @@ const App = {
     },
 
     cerrarModalVenta() { document.getElementById('modalVenta').classList.remove('active'); },
+
+    onMetodoPagoChange() {
+        const metodo = document.getElementById('ventaMetodoPago').value;
+        const cuentaSelect = document.getElementById('ventaCuentaDestino');
+        const sugerencias = {
+            'Efectivo':        'Efectivo - Caja',
+            'MercadoPago':     'MercadoPago - Gerardo',
+            'Transferencia':   'Transferencia - Gerardo',
+            'Tarjeta Débito':  'Tarjeta - Terminal',
+            'Tarjeta Crédito': 'Tarjeta - Terminal',
+        };
+        if (sugerencias[metodo]) cuentaSelect.value = sugerencias[metodo];
+    },
 
     toggleMontoPagado() {
         const estado = document.getElementById('ventaEstadoPago').value;
@@ -918,6 +934,7 @@ const App = {
             const tipoVenta = document.getElementById('ventaTipoVenta').value;
             const canal = document.getElementById('ventaCanal').value;
             const metodoPago = document.getElementById('ventaMetodoPago').value;
+            const cuentaDestino = document.getElementById('ventaCuentaDestino').value;
             const ocasion = document.getElementById('ventaOcasion').value;
             const notas = document.getElementById('ventaNotas').value.trim();
             const estadoPago = document.getElementById('ventaEstadoPago').value;
@@ -929,7 +946,7 @@ const App = {
 
             const dbVenta = {
                 fecha, tipo_venta: tipoVenta, canal, total_empaque: totalEmpaque,
-                cliente, metodo_pago: metodoPago, ocasion, notas,
+                cliente, metodo_pago: metodoPago, cuenta_destino: cuentaDestino, ocasion, notas,
                 estado_pago: estadoPago, monto_pagado: montoPagado
             };
 
@@ -943,13 +960,13 @@ const App = {
                 if (delEmpErr) throw delEmpErr;
                 const idx = data.ventas.findIndex(v => v.id === ventaId);
                 if (idx >= 0) {
-                    data.ventas[idx] = { id: ventaId, fecha, cliente, metodoPago, ocasion, tipoVenta, canal, notas, estadoPago, montoPagado, articulos, empaque, cantidadTotal, totalArticulos, totalEmpaque, total };
+                    data.ventas[idx] = { id: ventaId, fecha, cliente, metodoPago, cuentaDestino, ocasion, tipoVenta, canal, notas, estadoPago, montoPagado, articulos, empaque, cantidadTotal, totalArticulos, totalEmpaque, total };
                 }
             } else {
                 const { data: row, error: insErr } = await sb.from('ventas').insert(dbVenta).select().single();
                 if (insErr) throw insErr;
                 ventaId = row.id;
-                data.ventas.unshift({ id: ventaId, fecha, cliente, metodoPago, ocasion, tipoVenta, canal, notas, estadoPago, montoPagado, articulos, empaque, cantidadTotal, totalArticulos, totalEmpaque, total });
+                data.ventas.unshift({ id: ventaId, fecha, cliente, metodoPago, cuentaDestino, ocasion, tipoVenta, canal, notas, estadoPago, montoPagado, articulos, empaque, cantidadTotal, totalArticulos, totalEmpaque, total });
             }
 
             // Insert articulos
@@ -1053,7 +1070,7 @@ const App = {
                     <td><span class="badge" style="background:${v.tipoVenta === 'Minorista' ? '#E8F5E9' : '#FFF8ED'}; color:${v.tipoVenta === 'Minorista' ? '#2E7D32' : '#E09000'}; padding:2px 8px; border-radius:10px; font-size:11px;">${v.tipoVenta || 'Mayorista'}</span></td>
                     <td style="font-size:12px;">${v.canal || '-'}</td>
                     <td><span class="badge">${v.ocasion}</span></td>
-                    <td>${v.metodoPago}</td>
+                    <td style="font-size:12px;">${v.metodoPago}<br><span style="color:#F59E0B;font-size:10px;font-weight:600;">${v.cuentaDestino || '-'}</span></td>
                     <td style="font-weight:600;">${this.formatMoney(v.total)}</td>
                     <td>${v.estadoPago === 'Parcial'
                         ? `<div style="display:flex;flex-direction:column;gap:2px;align-items:center;">

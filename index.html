@@ -449,12 +449,23 @@
                     </div>
                     <div class="form-group">
                         <label>Método de Pago</label>
-                        <select id="ventaMetodoPago" class="input-field">
+                        <select id="ventaMetodoPago" class="input-field" onchange="App.onMetodoPagoChange()">
                             <option value="Efectivo">Efectivo</option>
                             <option value="Transferencia">Transferencia</option>
                             <option value="Tarjeta Débito">Tarjeta Débito</option>
                             <option value="Tarjeta Crédito">Tarjeta Crédito</option>
                             <option value="MercadoPago">MercadoPago</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-university" style="color:#F59E0B;"></i> Cuenta Destino</label>
+                        <select id="ventaCuentaDestino" class="input-field">
+                            <option value="Efectivo - Caja">Efectivo - Caja</option>
+                            <option value="MercadoPago - Gerardo">MercadoPago - Gerardo</option>
+                            <option value="MercadoPago - Lorena">MercadoPago - Lorena</option>
+                            <option value="Transferencia - Gerardo">Transferencia - Gerardo</option>
+                            <option value="Transferencia - Lorena">Transferencia - Lorena</option>
+                            <option value="Tarjeta - Terminal">Tarjeta - Terminal</option>
                         </select>
                     </div>
                     <div class="form-group">
