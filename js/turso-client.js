@@ -106,12 +106,15 @@ class TursoQuery {
             return { data: null, error: new Error(data.error) };
         }
 
-        const result = data.results?.[0];
-        if (!result || result.type !== 'ok') {
-            return { data: null, error: new Error('No result') };
-        }
+	const result = data.results?.[0];
+	if (result?.type === 'error') {
+		return { data: null, error: new Error(result.error?.message || JSON.stringify(result)) };
+	}
+	if (!result || result.type !== 'ok') {
+		return { data: null, error: new Error('No result') };
+	}
 
-        const execResult = result.response?.result;
+	const execResult = result.response?.result;
         if (!execResult) {
             return { data: null, error: new Error('No execute result') };
         }
@@ -183,11 +186,16 @@ class TursoInsert {
 
         const data = await tursoExecute(sql, params);
 
-        if (data.error) {
-            return { data: null, error: new Error(data.error) };
-        }
+	if (data.error) {
+		return { data: null, error: new Error(data.error) };
+	}
 
-        return { data: this._data, error: null };
+	const result = data.results?.[0];
+	if (result?.type === 'error') {
+		return { data: null, error: new Error(result.error?.message || JSON.stringify(result)) };
+	}
+
+	return { data: this._data, error: null };
     }
 }
 

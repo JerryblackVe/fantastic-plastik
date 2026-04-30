@@ -218,7 +218,7 @@ const App = {
 
     async addGastoFijo() {
         const { error } = await sb.from('gastos_fijos').insert({ nombre: 'Nuevo gasto', monto: 0 });
-        if (error) { console.error('Error:', error); this.toast('Error al agregar', 'error'); return; }
+        if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error.message || JSON.stringify(error)), 'error'); return; }
         const { data: allRows } = await sb.from('gastos_fijos').select('*').order('id');
         data.gastosFijos = (allRows || []).map(r => ({ id: r.id, nombre: r.nombre, monto: Number(r.monto) }));
         this.renderGastosFijos();
@@ -266,7 +266,7 @@ const App = {
 
     async addGastoEmpaque() {
         const { error } = await sb.from('gastos_empaque').insert({ nombre: 'Nuevo empaque', precio_unitario: 0 });
-        if (error) { console.error('Error:', error); this.toast('Error al agregar', 'error'); return; }
+        if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error.message || JSON.stringify(error)), 'error'); return; }
         const { data: allRows } = await sb.from('gastos_empaque').select('*').order('id');
         data.gastosEmpaque = (allRows || []).map(mapGastoEmpaque);
         this.renderGastosEmpaque();
@@ -344,7 +344,7 @@ const App = {
             }
             
             const { error } = await sb.from('materias_primas').insert({ nombre: '', unidad: 'KILO', precio: 0 });
-            if (error) { console.error('Error:', error); this.toast('Error al agregar', 'error'); return; }
+if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error.message || JSON.stringify(error)), 'error'); return; }
             
             const { data: allRows } = await sb.from('materias_primas').select('*').order('id');
             data.materiasPrimas = (allRows || []).map(r => ({ id: r.id, nombre: r.nombre, unidad: r.unidad, precio: Number(r.precio) }));
@@ -400,7 +400,7 @@ const App = {
 
     async addImpresora() {
         const { error } = await sb.from('impresoras').insert({ nombre: 'NUEVA IMPRESORA', watios: 100 });
-        if (error) { console.error('Error:', error); this.toast('Error al agregar', 'error'); return; }
+        if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error.message || JSON.stringify(error)), 'error'); return; }
         const { data: allRows } = await sb.from('impresoras').select('*').order('id');
         data.impresoras = (allRows || []).map(r => ({ id: r.id, nombre: r.nombre, watios: Number(r.watios) }));
         this.renderImpresoras();
@@ -455,7 +455,7 @@ const App = {
 
     async addServicioTercero() {
         const { error } = await sb.from('servicios_terceros').insert({ nombre: 'NUEVO SERVICIO', unidad: 'UNIDAD', cantidad: 1, piezas: 1, precio_unidad: 0 });
-        if (error) { console.error('Error:', error); this.toast('Error al agregar', 'error'); return; }
+        if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error.message || JSON.stringify(error)), 'error'); return; }
         const { data: allRows } = await sb.from('servicios_terceros').select('*').order('id');
         data.serviciosTerceros = (allRows || []).map(mapServicio);
         this.renderServiciosTerceros();
