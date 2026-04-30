@@ -217,8 +217,10 @@ const App = {
     },
 
     async addGastoFijo() {
-        const { data: row } = await sb.from('gastos_fijos').insert({ nombre: 'Nuevo gasto', monto: 0 }).select().single();
-        if (row) data.gastosFijos.push({ id: row.id, nombre: row.nombre, monto: Number(row.monto) });
+        const { error } = await sb.from('gastos_fijos').insert({ nombre: 'Nuevo gasto', monto: 0 });
+        if (error) { console.error('Error:', error); this.toast('Error al agregar', 'error'); return; }
+        const { data: allRows } = await sb.from('gastos_fijos').select('*').order('id');
+        data.gastosFijos = (allRows || []).map(r => ({ id: r.id, nombre: r.nombre, monto: Number(r.monto) }));
         this.renderGastosFijos();
         this.toast('Gasto fijo agregado');
     },
@@ -263,8 +265,10 @@ const App = {
     },
 
     async addGastoEmpaque() {
-        const { data: row } = await sb.from('gastos_empaque').insert({ nombre: 'Nuevo empaque', precio_unitario: 0 }).select().single();
-        if (row) data.gastosEmpaque.push(mapGastoEmpaque(row));
+        const { error } = await sb.from('gastos_empaque').insert({ nombre: 'Nuevo empaque', precio_unitario: 0 });
+        if (error) { console.error('Error:', error); this.toast('Error al agregar', 'error'); return; }
+        const { data: allRows } = await sb.from('gastos_empaque').select('*').order('id');
+        data.gastosEmpaque = (allRows || []).map(mapGastoEmpaque);
         this.renderGastosEmpaque();
         this.toast('Item de empaque agregado');
     },
@@ -332,15 +336,13 @@ const App = {
 
     async addMateriaPrima() {
         try {
-            // Insert without select (multi-statement SQL not supported by Turso HTTP API)
             const { error } = await sb.from('materias_primas').insert({ nombre: 'NUEVA', unidad: 'KILO', precio: 0 });
             if (error) { console.error('Error:', error); this.toast('Error al agregar', 'error'); return; }
-            // Fetch the last inserted row (rowid = id for simple tables)
-            const { data: allRows } = await sb.from('materias_primas').select('*').order('id', { ascending: false });
-            if (allRows && allRows.length > 0) {
-                const row = allRows[0];
-                data.materiasPrimas.push({ id: row.id, nombre: row.nombre, unidad: row.unidad, precio: Number(row.precio) });
-            }
+            
+            // Recargar TODA la lista desde la BD (no solo el último)
+            const { data: allRows } = await sb.from('materias_primas').select('*').order('id');
+            data.materiasPrimas = (allRows || []).map(r => ({ id: r.id, nombre: r.nombre, unidad: r.unidad, precio: Number(r.precio) }));
+            
             this.renderMateriasPrimas();
             this.toast('Materia prima agregada');
         } catch (err) {
@@ -391,8 +393,10 @@ const App = {
     },
 
     async addImpresora() {
-        const { data: row } = await sb.from('impresoras').insert({ nombre: 'NUEVA IMPRESORA', watios: 100 }).select().single();
-        if (row) data.impresoras.push({ id: row.id, nombre: row.nombre, watios: Number(row.watios) });
+        const { error } = await sb.from('impresoras').insert({ nombre: 'NUEVA IMPRESORA', watios: 100 });
+        if (error) { console.error('Error:', error); this.toast('Error al agregar', 'error'); return; }
+        const { data: allRows } = await sb.from('impresoras').select('*').order('id');
+        data.impresoras = (allRows || []).map(r => ({ id: r.id, nombre: r.nombre, watios: Number(r.watios) }));
         this.renderImpresoras();
         this.toast('Impresora agregada');
     },
@@ -444,8 +448,10 @@ const App = {
     },
 
     async addServicioTercero() {
-        const { data: row } = await sb.from('servicios_terceros').insert({ nombre: 'NUEVO SERVICIO', unidad: 'UNIDAD', cantidad: 1, piezas: 1, precio_unidad: 0 }).select().single();
-        if (row) data.serviciosTerceros.push(mapServicio(row));
+        const { error } = await sb.from('servicios_terceros').insert({ nombre: 'NUEVO SERVICIO', unidad: 'UNIDAD', cantidad: 1, piezas: 1, precio_unidad: 0 });
+        if (error) { console.error('Error:', error); this.toast('Error al agregar', 'error'); return; }
+        const { data: allRows } = await sb.from('servicios_terceros').select('*').order('id');
+        data.serviciosTerceros = (allRows || []).map(mapServicio);
         this.renderServiciosTerceros();
         this.toast('Servicio agregado');
     },
