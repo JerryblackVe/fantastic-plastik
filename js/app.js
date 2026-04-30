@@ -1,12 +1,10 @@
 /* ============================================
-   FANTASTIC PLASTIK - App Principal v3
-   Supabase Edition - Cloud Database
+   FANTASTIC PLASTIK - App Principal v4
+   Turso Edition - Cloud SQLite Database
    ============================================ */
 
-const SUPABASE_URL = 'https://kltmnefipiqooqupycnl.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsdG1uZWZpcGlxb29xdXB5Y25sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTMyNjIsImV4cCI6MjA5MDI4OTI2Mn0.WooVjFLihzL6DqWI2KCIlve2hS0Nvl52Rj9lVaTwkv8';
-
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Cliente Turso definido en turso-client.js
+// sb = Supabase-style client usando Turso HTTP API
 
 let data = { gastosFijos: [], gastosEmpaque: [], materiasPrimas: [], impresoras: [], serviciosTerceros: [], productos: [], ventas: [], precioKWH: 160, costoTrabajoPorMinuto: 33.33 };
 let charts = {};
