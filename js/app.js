@@ -331,10 +331,22 @@ const App = {
     },
 
     async addMateriaPrima() {
-        const { data: row } = await sb.from('materias_primas').insert({ nombre: 'NUEVA', unidad: 'KILO', precio: 0 }).select().single();
-        if (row) data.materiasPrimas.push({ id: row.id, nombre: row.nombre, unidad: row.unidad, precio: Number(row.precio) });
-        this.renderMateriasPrimas();
-        this.toast('Materia prima agregada');
+        try {
+            // Insert without select (multi-statement SQL not supported by Turso HTTP API)
+            const { error } = await sb.from('materias_primas').insert({ nombre: 'NUEVA', unidad: 'KILO', precio: 0 });
+            if (error) { console.error('Error:', error); this.toast('Error al agregar', 'error'); return; }
+            // Fetch the last inserted row (rowid = id for simple tables)
+            const { data: allRows } = await sb.from('materias_primas').select('*').order('id', { ascending: false });
+            if (allRows && allRows.length > 0) {
+                const row = allRows[0];
+                data.materiasPrimas.push({ id: row.id, nombre: row.nombre, unidad: row.unidad, precio: Number(row.precio) });
+            }
+            this.renderMateriasPrimas();
+            this.toast('Materia prima agregada');
+        } catch (err) {
+            console.error('Excepcion:', err);
+            this.toast('Error: ' + err.message, 'error');
+        }
     },
 
     async deleteMateria(id) {

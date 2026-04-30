@@ -174,11 +174,6 @@ class TursoInsert {
 
         let sql = `INSERT INTO ${this.table} (${columns.join(', ')}) VALUES ${placeholders}`;
 
-        const needSelect = this._single && columns.length > 0;
-        if (needSelect) {
-            sql += `; SELECT * FROM ${this.table} ORDER BY rowid DESC LIMIT 1`;
-        }
-
         const params = [];
         rows.forEach(row => {
             columns.forEach(col => {
@@ -190,27 +185,6 @@ class TursoInsert {
 
         if (data.error) {
             return { data: null, error: new Error(data.error) };
-        }
-
-        if (needSelect) {
-            // With multi-statement SQL, results[0] = INSERT result, results[1] = SELECT result
-            const insertResult = data.results?.[0];
-            const selectResult = data.results?.[1];
-            const execResult = selectResult?.response?.result;
-            if (execResult && execResult.rows && execResult.rows.length > 0) {
-                const cols = execResult.cols || [];
-                const row = execResult.rows[0];
-                const obj = convertRow(row, cols);
-                return { data: obj, error: null };
-            }
-            // Fallback: check if insert result has rows (some DB configs return differently)
-            const fallbackResult = insertResult?.response?.result;
-            if (fallbackResult && fallbackResult.rows && fallbackResult.rows.length > 0) {
-                const cols = fallbackResult.cols || [];
-                const row = fallbackResult.rows[0];
-                const obj = convertRow(row, cols);
-                return { data: obj, error: null };
-            }
         }
 
         return { data: this._data, error: null };
