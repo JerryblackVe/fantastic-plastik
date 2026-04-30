@@ -336,10 +336,16 @@ const App = {
 
     async addMateriaPrima() {
         try {
-            const { error } = await sb.from('materias_primas').insert({ nombre: 'NUEVA', unidad: 'KILO', precio: 0 });
+            // Guardar cualquier input editable que esté activo
+            const activeInput = document.querySelector('.cell-input:focus');
+            if (activeInput) {
+                activeInput.blur();
+                await new Promise(r => setTimeout(r, 50));
+            }
+            
+            const { error } = await sb.from('materias_primas').insert({ nombre: '', unidad: 'KILO', precio: 0 });
             if (error) { console.error('Error:', error); this.toast('Error al agregar', 'error'); return; }
             
-            // Recargar TODA la lista desde la BD (no solo el último)
             const { data: allRows } = await sb.from('materias_primas').select('*').order('id');
             data.materiasPrimas = (allRows || []).map(r => ({ id: r.id, nombre: r.nombre, unidad: r.unidad, precio: Number(r.precio) }));
             
