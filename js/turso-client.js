@@ -4,7 +4,7 @@
    ============================================ */
 
 const TURSO_URL = 'https://fpcuenta-jerryblack.aws-us-west-2.turso.io/v2/pipeline';
-const TURSO_TOKEN = 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3Nzc1MTA4NjYsImlkIjoiMDE5ZGRiZTYtZjYwMS03ZTRmLWJiNzMtYzQ5YjAyZWY2ZWFjIiwicmlkIjoiZWY3OWQ5ODQtMGI4My00ZDhlLTgxZjMtNTNhNzUzYTZkMjhlIn0.L1YRc-S63tEaUDIPTWCVo6f0dvgiBxgAE9T7dVnBi8xg7IXqyWEBawCub2Ikh697OrB_vOqrsA6J1mpEyWSEAQ';
+const TURSO_TOKEN = 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3Nzc1NTA3OTEsImlkIjoiMDE5ZGRiZTYtZjYwMS03ZTRmLWJiNzMtYzQ5YjAyZWY2ZWFjIiwicmlkIjoiZWY3OWQ5ODQtMGI4My00ZDhlLTgxZjMtNTNhNzUzYTZkMjhlIn0.XvG1r97iqCWUNECnOkU3E3lm9hTur8Qjpailkplyi_Ai94oTOgkyIjBbad64chLa2nZVQwP7H1NXoxPyBLKcCA';
 
 function convertRow(row, cols) {
     const obj = {};
@@ -77,13 +77,8 @@ class TursoQuery {
         return this;
     }
 
-    async then(resolve, reject) {
-        try {
-            const result = await this._execute();
-            resolve(result);
-        } catch (err) {
-            reject(err);
-        }
+    then(resolve, reject) {
+        return this._execute().then(resolve, reject);
     }
 
     async _execute() {
@@ -106,7 +101,7 @@ class TursoQuery {
         }
 
         const data = await tursoExecute(sql, params);
-        
+
         if (data.error) {
             return { data: null, error: new Error(data.error) };
         }
@@ -162,30 +157,25 @@ class TursoInsert {
         return this;
     }
 
-    async then(resolve, reject) {
-        try {
-            const result = await this._execute();
-            resolve(result);
-        } catch (err) {
-            reject(err);
-        }
+    then(resolve, reject) {
+        return this._execute().then(resolve, reject);
     }
 
     async _execute() {
         const isArray = Array.isArray(this._data);
         const rows = isArray ? this._data : [this._data];
-        
+
         const columns = Object.keys(rows[0]);
         const placeholders = rows.map((_, rowIdx) => {
             return '(' + columns.map((_, colIdx) => {
                 return '$' + (rowIdx * columns.length + colIdx + 1);
             }).join(', ') + ')';
         }).join(', ');
-        
+
         let sql = `INSERT INTO ${this.table} (${columns.join(', ')}) VALUES ${placeholders}`;
-        
-        if (this._single && columns.length > 0) {
-            const lastCol = columns[columns.length - 1];
+
+        const needSelect = this._single && columns.length > 0;
+        if (needSelect) {
             sql += `; SELECT * FROM ${this.table} ORDER BY rowid DESC LIMIT 1`;
         }
 
@@ -197,17 +187,27 @@ class TursoInsert {
         });
 
         const data = await tursoExecute(sql, params);
-        
+
         if (data.error) {
             return { data: null, error: new Error(data.error) };
         }
 
-        if (this._single) {
-            const result = data.results?.[0];
-            const execResult = result?.response?.result;
+        if (needSelect) {
+            // With multi-statement SQL, results[0] = INSERT result, results[1] = SELECT result
+            const insertResult = data.results?.[0];
+            const selectResult = data.results?.[1];
+            const execResult = selectResult?.response?.result;
             if (execResult && execResult.rows && execResult.rows.length > 0) {
                 const cols = execResult.cols || [];
                 const row = execResult.rows[0];
+                const obj = convertRow(row, cols);
+                return { data: obj, error: null };
+            }
+            // Fallback: check if insert result has rows (some DB configs return differently)
+            const fallbackResult = insertResult?.response?.result;
+            if (fallbackResult && fallbackResult.rows && fallbackResult.rows.length > 0) {
+                const cols = fallbackResult.cols || [];
+                const row = fallbackResult.rows[0];
                 const obj = convertRow(row, cols);
                 return { data: obj, error: null };
             }
@@ -229,16 +229,15 @@ class TursoUpdate {
         return this;
     }
 
-    async then(resolve, reject) {
-        try {
-            const result = await this._execute();
-            resolve(result);
-        } catch (err) {
-            reject(err);
-        }
+    then(resolve, reject) {
+        return this._execute().then(resolve, reject);
     }
 
     async _execute() {
+        if (this._filters.length === 0) {
+            return { data: null, error: new Error('UPDATE without WHERE clause is not allowed. Use .eq() to specify a filter.') };
+        }
+
         const setParts = [];
         const params = [];
         let paramIdx = 1;
@@ -251,18 +250,16 @@ class TursoUpdate {
 
         let sql = `UPDATE ${this.table} SET ${setParts.join(', ')}`;
 
-        if (this._filters.length > 0) {
-            const whereParts = [];
-            for (const f of this._filters) {
-                whereParts.push(`${f.column} = $${paramIdx}`);
-                params.push(f.value);
-                paramIdx++;
-            }
-            sql += ' WHERE ' + whereParts.join(' AND ');
+        const whereParts = [];
+        for (const f of this._filters) {
+            whereParts.push(`${f.column} = $${paramIdx}`);
+            params.push(f.value);
+            paramIdx++;
         }
+        sql += ' WHERE ' + whereParts.join(' AND ');
 
         const data = await tursoExecute(sql, params);
-        
+
         if (data.error) {
             return { data: null, error: new Error(data.error) };
         }
@@ -282,32 +279,29 @@ class TursoDelete {
         return this;
     }
 
-    async then(resolve, reject) {
-        try {
-            const result = await this._execute();
-            resolve(result);
-        } catch (err) {
-            reject(err);
-        }
+    then(resolve, reject) {
+        return this._execute().then(resolve, reject);
     }
 
     async _execute() {
+        if (this._filters.length === 0) {
+            return { data: null, error: new Error('DELETE without WHERE clause is not allowed. Use .eq() to specify a filter.') };
+        }
+
         let sql = `DELETE FROM ${this.table}`;
         const params = [];
         let paramIdx = 1;
 
-        if (this._filters.length > 0) {
-            const whereParts = [];
-            for (const f of this._filters) {
-                whereParts.push(`${f.column} = $${paramIdx}`);
-                params.push(f.value);
-                paramIdx++;
-            }
-            sql += ' WHERE ' + whereParts.join(' AND ');
+        const whereParts = [];
+        for (const f of this._filters) {
+            whereParts.push(`${f.column} = $${paramIdx}`);
+            params.push(f.value);
+            paramIdx++;
         }
+        sql += ' WHERE ' + whereParts.join(' AND ');
 
         const data = await tursoExecute(sql, params);
-        
+
         if (data.error) {
             return { data: null, error: new Error(data.error) };
         }

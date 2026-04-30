@@ -89,7 +89,7 @@ const App = {
                 };
             });
 
-            console.log('Datos cargados desde Supabase');
+            console.log('Datos cargados desde Turso');
         } catch (err) {
             console.error('Error cargando datos:', err);
             this.toast('Error al cargar datos', 'error');
@@ -943,7 +943,7 @@ const App = {
             let ventaId;
 
             const dbVenta = {
-                fecha, tipo_venta: tipoVenta, canal, total_empaque: totalEmpaque,
+                fecha, tipo_venta: tipoVenta, canal,
                 cliente, metodo_pago: metodoPago, cuenta_destino: cuentaDestino, ocasion, notas,
                 estado_pago: estadoPago, monto_pagado: montoPagado
             };
