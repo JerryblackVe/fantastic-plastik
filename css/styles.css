@@ -780,6 +780,17 @@ body {
     border-radius: var(--radius-sm);
 }
 
+.empaque-row {
+    display: grid;
+    grid-template-columns: 1fr 80px 100px 32px;
+    gap: 8px;
+    align-items: end;
+    margin-bottom: 8px;
+    padding: 10px;
+    background: var(--gray-100);
+    border-radius: var(--radius-sm);
+}
+
 .venta-total {
     display: flex;
     justify-content: space-between;

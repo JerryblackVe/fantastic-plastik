@@ -212,7 +212,12 @@ const App = {
         if (!item) return;
         if (field === 'monto') item.monto = parseFloat(value) || 0;
         else item.nombre = value || 'Sin nombre';
-        await sb.from('gastos_fijos').update({ [field]: field === 'monto' ? item.monto : item.nombre }).eq('id', id);
+        try {
+            const { error } = await sb.from('gastos_fijos').update({ [field]: field === 'monto' ? item.monto : item.nombre }).eq('id', id);
+            if (error) throw error;
+        } catch(err) {
+            this.toast('Error al guardar: ' + (err.message || JSON.stringify(err)), 'error');
+        }
         this.renderGastosFijos();
     },
 
@@ -260,7 +265,12 @@ const App = {
         else item.nombre = value || 'Sin nombre';
         const dbField = field === 'precioUnitario' ? 'precio_unitario' : 'nombre';
         const dbValue = field === 'precioUnitario' ? item.precioUnitario : item.nombre;
-        await sb.from('gastos_empaque').update({ [dbField]: dbValue }).eq('id', id);
+        try {
+            const { error } = await sb.from('gastos_empaque').update({ [dbField]: dbValue }).eq('id', id);
+            if (error) throw error;
+        } catch(err) {
+            this.toast('Error al guardar: ' + (err.message || JSON.stringify(err)), 'error');
+        }
         this.renderGastosEmpaque();
     },
 
@@ -327,9 +337,15 @@ const App = {
 
     async saveMateria(id, field, value) {
         const item = data.materiasPrimas.find(m => m.id === id);
+        if (!item) return;
         if (field === 'precio') item.precio = parseFloat(value) || 0;
         else item[field] = value || '';
-        await sb.from('materias_primas').update({ [field]: item[field] }).eq('id', id);
+        try {
+            const { error } = await sb.from('materias_primas').update({ [field]: item[field] }).eq('id', id);
+            if (error) throw error;
+        } catch(err) {
+            this.toast('Error al guardar: ' + (err.message || JSON.stringify(err)), 'error');
+        }
         this.renderMateriasPrimas();
         this.refreshAll();
     },
@@ -391,9 +407,15 @@ if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error
 
     async saveImpresora(id, field, value) {
         const item = data.impresoras.find(i => i.id === id);
+        if (!item) return;
         if (field === 'watios') item.watios = parseFloat(value) || 0;
         else item[field] = value || '';
-        await sb.from('impresoras').update({ [field]: item[field] }).eq('id', id);
+        try {
+            const { error } = await sb.from('impresoras').update({ [field]: item[field] }).eq('id', id);
+            if (error) throw error;
+        } catch(err) {
+            this.toast('Error al guardar: ' + (err.message || JSON.stringify(err)), 'error');
+        }
         this.renderImpresoras();
         this.refreshAll();
     },
@@ -444,11 +466,17 @@ if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error
 
     async saveServicio(id, field, value) {
         const item = data.serviciosTerceros.find(s => s.id === id);
+        if (!item) return;
         const numFields = ['cantidad', 'piezas', 'precioUnidad'];
         if (numFields.includes(field)) item[field] = parseFloat(value) || 0;
         else item[field] = value || '';
         const dbField = field === 'precioUnidad' ? 'precio_unidad' : field;
-        await sb.from('servicios_terceros').update({ [dbField]: item[field] }).eq('id', id);
+        try {
+            const { error } = await sb.from('servicios_terceros').update({ [dbField]: item[field] }).eq('id', id);
+            if (error) throw error;
+        } catch(err) {
+            this.toast('Error al guardar: ' + (err.message || JSON.stringify(err)), 'error');
+        }
         this.renderServiciosTerceros();
         this.refreshAll();
     },
@@ -477,6 +505,10 @@ if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error
     // ========================================
     renderProductos() {
         const grid = document.getElementById('productosGrid');
+        if (data.productos.length === 0) {
+            grid.innerHTML = '<div class="empty-state visible"><i class="fas fa-box-open"></i><p>No hay productos. Haz clic en "+ Nuevo Producto" para comenzar.</p></div>';
+            return;
+        }
         grid.innerHTML = data.productos.map(p => {
             const c = this.calcCostoProducto(p);
             const materia = this.getMateriaPrima(p.materiaPrimaId);
@@ -735,11 +767,20 @@ if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error
     },
 
     async deleteProducto(id) {
+        const usadaEnVentas = data.ventas.some(v => v.articulos.some(a => a.productoId === id));
+        if (usadaEnVentas) { alert('No se puede eliminar: este producto está referenciado en ventas existentes.'); return; }
         if (!confirm('¿Eliminar este producto?')) return;
-        await sb.from('productos').delete().eq('id', id);
-        data.productos = data.productos.filter(p => p.id !== id);
-        this.renderProductos();
-        this.toast('Producto eliminado', 'info');
+        try {
+            await sb.from('producto_servicios').delete().eq('producto_id', id);
+            await sb.from('producto_descuentos').delete().eq('producto_id', id);
+            const { error } = await sb.from('productos').delete().eq('id', id);
+            if (error) throw error;
+            data.productos = data.productos.filter(p => p.id !== id);
+            this.renderProductos();
+            this.toast('Producto eliminado', 'info');
+        } catch(err) {
+            this.toast('Error al eliminar: ' + (err.message || JSON.stringify(err)), 'error');
+        }
     },
 
     // ========================================
@@ -875,7 +916,7 @@ if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error
     renderEmpaqueVentaRow(empaqueId, cantidad) {
         const container = document.getElementById('ventaEmpaque');
         const row = document.createElement('div');
-        row.className = 'articulo-row';
+        row.className = 'empaque-row';
         row.innerHTML = `
             <select class="input-field emp-item" onchange="App.updateVentaTotal()">
                 ${data.gastosEmpaque.map(e => `<option value="${e.id}" ${e.id === empaqueId ? 'selected' : ''}>${e.nombre} (${this.formatMoney(e.precioUnitario)})</option>`).join('')}
@@ -1044,10 +1085,19 @@ if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error
 
     async deleteVenta(id) {
         if (!confirm('¿Eliminar esta venta?')) return;
-        await sb.from('ventas').delete().eq('id', id);
-        data.ventas = data.ventas.filter(v => v.id !== id);
-        this.renderVentas();
-        this.toast('Venta eliminada', 'info');
+        try {
+            const { error: e1 } = await sb.from('venta_articulos').delete().eq('venta_id', id);
+            if (e1) throw e1;
+            const { error: e2 } = await sb.from('venta_empaque').delete().eq('venta_id', id);
+            if (e2) throw e2;
+            const { error: e3 } = await sb.from('ventas').delete().eq('id', id);
+            if (e3) throw e3;
+            data.ventas = data.ventas.filter(v => v.id !== id);
+            this.renderVentas();
+            this.toast('Venta eliminada', 'info');
+        } catch(err) {
+            this.toast('Error al eliminar: ' + (err.message || JSON.stringify(err)), 'error');
+        }
     },
 
     filtrarVentas() { this.renderVentas(); },
