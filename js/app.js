@@ -1122,6 +1122,14 @@ if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error
 
     filtrarVentas() { this.renderVentas(); },
 
+    irAMesPendiente(mes) {
+        const filtroMes = document.getElementById('filtroMes');
+        if (filtroMes) filtroMes.value = mes;
+        this.renderVentas();
+        const tabla = document.getElementById('tablaVentas');
+        if (tabla) tabla.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
+
     getVentasFiltradas() {
         let ventas = [...data.ventas];
         const mes = document.getElementById('filtroMes').value;
@@ -1194,12 +1202,26 @@ if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error
         const cantidadPorCobrar = ventasPorCobrar.length;
         const montoPorCobrar = ventasPorCobrar.reduce((s, v) => s + (v.total - (v.montoPagado || 0)), 0);
 
+        // Agrupar saldo pendiente por mes (YYYY-MM) para botones de acceso directo
+        const mesesAbrev = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const pendientePorMes = {};
+        ventasPorCobrar.forEach(v => {
+            if (!v.fecha) return;
+            const mes = v.fecha.substring(0, 7);
+            pendientePorMes[mes] = (pendientePorMes[mes] || 0) + (v.total - (v.montoPagado || 0));
+        });
+        const botonesMeses = Object.keys(pendientePorMes).sort().map(mes => {
+            const [y, m] = mes.split('-');
+            const label = `${mesesAbrev[parseInt(m, 10) - 1]} ${y}`;
+            return `<button class="btn-mes-pendiente" onclick="App.irAMesPendiente('${mes}')">${label}: ${this.formatMoney(pendientePorMes[mes])}</button>`;
+        }).join('');
+
         document.getElementById('ventasKPIs').innerHTML = `
             <div class="kpi-card primary"><div class="kpi-label">Total Ventas</div><div class="kpi-value">${this.formatMoney(totalVentas)}</div><div class="kpi-detail">${ventas.length} transacciones</div></div>
             <div class="kpi-card info"><div class="kpi-label">Unidades Vendidas</div><div class="kpi-value">${totalUnidades.toLocaleString('es-AR')}</div></div>
             <div class="kpi-card warning"><div class="kpi-label">Gasto Empaque</div><div class="kpi-value">${this.formatMoney(totalEmpaque)}</div></div>
             <div class="kpi-card success"><div class="kpi-label">Ticket Promedio</div><div class="kpi-value">${this.formatMoney(ticketPromedio)}</div></div>
-            <div class="kpi-card danger"><div class="kpi-label">Por Cobrar</div><div class="kpi-value">${this.formatMoney(montoPorCobrar)}</div><div class="kpi-detail">${cantidadPorCobrar} venta${cantidadPorCobrar === 1 ? '' : 's'} pendiente${cantidadPorCobrar === 1 ? '' : 's'}</div></div>
+            <div class="kpi-card danger"><div class="kpi-label">Por Cobrar</div><div class="kpi-value">${this.formatMoney(montoPorCobrar)}</div><div class="kpi-detail">${cantidadPorCobrar} venta${cantidadPorCobrar === 1 ? '' : 's'} pendiente${cantidadPorCobrar === 1 ? '' : 's'}</div>${botonesMeses ? `<div class="meses-pendientes">${botonesMeses}</div>` : ''}</div>
         `;
     },
 

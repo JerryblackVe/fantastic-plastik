@@ -223,6 +223,31 @@ body {
 .kpi-card.warning { border-left-color: var(--warning); }
 .kpi-card.purple { border-left-color: var(--purple); }
 
+.meses-pendientes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.btn-mes-pendiente {
+    background: var(--danger);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.btn-mes-pendiente:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
+}
+
 .kpi-label {
     font-size: 12px;
     font-weight: 600;
