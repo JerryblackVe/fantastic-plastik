@@ -3,8 +3,9 @@
    Emula la interfaz de Supabase para facilitar la migración
    ============================================ */
 
-const TURSO_URL = 'https://fpcuenta-jerryblack.aws-us-west-2.turso.io/v2/pipeline';
-const TURSO_TOKEN = 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3Nzc1NTA3OTEsImlkIjoiMDE5ZGRiZTYtZjYwMS03ZTRmLWJiNzMtYzQ5YjAyZWY2ZWFjIiwicmlkIjoiZWY3OWQ5ODQtMGI4My00ZDhlLTgxZjMtNTNhNzUzYTZkMjhlIn0.XvG1r97iqCWUNECnOkU3E3lm9hTur8Qjpailkplyi_Ai94oTOgkyIjBbad64chLa2nZVQwP7H1NXoxPyBLKcCA';
+// El token de Turso ya NO esta aca. Vive en Vercel como variable de entorno.
+// El navegador habla con el proxy /api/turso, que agrega el token del lado servidor.
+const TURSO_PROXY_URL = '/api/turso';
 
 // Convierte valores JS a formato tipado de Turso API
 function toTursoValue(v) {
@@ -34,10 +35,9 @@ function convertRow(row, cols) {
 }
 
 async function tursoExecute(sql, params = []) {
-    const response = await fetch(TURSO_URL, {
+    const response = await fetch(TURSO_PROXY_URL, {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${TURSO_TOKEN}`,
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({

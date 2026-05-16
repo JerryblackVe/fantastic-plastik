@@ -6,7 +6,7 @@
 // Cliente Turso definido en turso-client.js
 // sb = Supabase-style client usando Turso HTTP API
 
-let data = { gastosFijos: [], gastosEmpaque: [], materiasPrimas: [], impresoras: [], serviciosTerceros: [], productos: [], ventas: [], precioKWH: 160, costoTrabajoPorMinuto: 33.33 };
+let data = { gastosFijos: [], gastosEmpaque: [], materiasPrimas: [], impresoras: [], serviciosTerceros: [], productos: [], ventas: [], precioKWH: 160, costoTrabajoPorMinuto: 33.33, mermaPorcentaje: 0 };
 let charts = {};
 let rendimientoPeriodo = 'mensual';
 
@@ -47,6 +47,7 @@ const App = {
             if (cfgRes.data) {
                 data.precioKWH = Number(cfgRes.data.precio_kwh);
                 data.costoTrabajoPorMinuto = Number(cfgRes.data.costo_trabajo_por_minuto);
+                data.mermaPorcentaje = Number(cfgRes.data.merma_porcentaje) || 0;
             }
             data.gastosFijos = (gfRes.data || []).map(r => ({ id: r.id, nombre: r.nombre, monto: Number(r.monto) }));
             data.gastosEmpaque = (geRes.data || []).map(mapGastoEmpaque);
@@ -143,6 +144,7 @@ const App = {
     formatMoney(n) { return (n === null || n === undefined || isNaN(n)) ? '$0' : '$' + Math.round(n).toLocaleString('es-AR'); },
     formatPercent(n) { return (n === null || n === undefined || isNaN(n)) ? '0%' : (n * 100).toFixed(1) + '%'; },
     formatFecha(d) { if (!d) return '-'; const [y, m, dd] = d.split('-'); return `${dd}/${m}/${y}`; },
+    localDate() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); },
 
     toast(msg, type = 'success') {
         const container = document.getElementById('toastContainer');
@@ -175,9 +177,11 @@ const App = {
                 if (serv) costoServicios += (serv.precioUnidad / (serv.piezas || 1)) * (s.cantidadPiezas || 1);
             });
         }
-        const costoTotal = gastoFilamento + costoElectricidad + costoServicios + costoTrabajador;
+        const costoBase = gastoFilamento + costoElectricidad + costoServicios + costoTrabajador;
+        const costoMerma = costoBase * (data.mermaPorcentaje / 100);
+        const costoTotal = costoBase + costoMerma;
         const margen = prod.precioVenta > 0 ? (prod.precioVenta - costoTotal) / prod.precioVenta : 0;
-        return { gastoFilamento, costoElectricidad, costoServicios, costoTrabajador, costoTotal, margen, gananciaBruta: prod.precioVenta - costoTotal };
+        return { gastoFilamento, costoElectricidad, costoServicios, costoTrabajador, costoBase, costoMerma, costoTotal, margen, gananciaBruta: prod.precioVenta - costoTotal };
     },
 
     // ========================================
@@ -300,6 +304,7 @@ const App = {
         this.renderServiciosTerceros();
         document.getElementById('precioKWH').value = data.precioKWH;
         document.getElementById('costoTrabajo').value = data.costoTrabajoPorMinuto;
+        document.getElementById('mermaPorcentaje').value = data.mermaPorcentaje;
     },
 
     async updatePrecioKWH(val) {
@@ -315,6 +320,18 @@ const App = {
         await sb.from('config').update({ costo_trabajo_por_minuto: data.costoTrabajoPorMinuto }).eq('id', 1);
         this.refreshAll();
         this.toast('Gasto de trabajo actualizado');
+    },
+
+    async updateMerma(val) {
+        data.mermaPorcentaje = parseFloat(val) || 0;
+        try {
+            const { error } = await sb.from('config').update({ merma_porcentaje: data.mermaPorcentaje }).eq('id', 1);
+            if (error) throw error;
+        } catch (err) {
+            this.toast('Error al guardar merma: ' + (err.message || JSON.stringify(err)), 'error');
+        }
+        this.refreshAll();
+        this.toast('Merma actualizada');
     },
 
     // -- Materias Primas --
@@ -683,7 +700,9 @@ if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error
             const cant = parseFloat(row.querySelector('.servicio-cantidad').value) || 0;
             if (serv) gServ += (serv.precioUnidad / (serv.piezas || 1)) * cant;
         });
-        const total = gFil + gElec + gServ + gTrab;
+        const gBase = gFil + gElec + gServ + gTrab;
+        const gMerma = gBase * (data.mermaPorcentaje / 100);
+        const total = gBase + gMerma;
         const margenMay = precioVenta > 0 ? (precioVenta - total) / precioVenta : 0;
         const margenMin = precioMinorista > 0 ? (precioMinorista - total) / precioMinorista : 0;
 
@@ -692,6 +711,7 @@ if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error
             <div class="preview-row"><span>Electricidad (${tiempoImp} min)</span><span>${this.formatMoney(gElec)}</span></div>
             <div class="preview-row"><span>Trabajo (${tiempoTrab} min)</span><span>${this.formatMoney(gTrab)}</span></div>
             <div class="preview-row"><span>Servicios Terceros</span><span>${this.formatMoney(gServ)}</span></div>
+            <div class="preview-row"><span>Merma (${data.mermaPorcentaje}%)</span><span>${this.formatMoney(gMerma)}</span></div>
             <div class="preview-row total"><span>GASTO TOTAL</span><span>${this.formatMoney(total)}</span></div>
             <div class="preview-row"><span>Precio Mayorista</span><span>${this.formatMoney(precioVenta)}</span></div>
             <div class="preview-row" style="color:${margenMay >= 0 ? '#22C55E' : '#EF4444'}; font-weight:600;">
@@ -789,7 +809,7 @@ if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error
     abrirModalVenta(editId) {
         document.getElementById('modalVenta').classList.add('active');
         document.getElementById('ventaEditId').value = '';
-        document.getElementById('ventaFecha').value = new Date().toISOString().split('T')[0];
+        document.getElementById('ventaFecha').value = this.localDate();
         document.getElementById('ventaCliente').value = '';
         document.getElementById('ventaNotas').value = '';
         document.getElementById('ventaArticulos').innerHTML = '';
@@ -949,7 +969,7 @@ if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error
             subtotalArt += sub;
         });
         let subtotalEmp = 0;
-        document.querySelectorAll('#ventaEmpaque .articulo-row').forEach(row => {
+        document.querySelectorAll('#ventaEmpaque .empaque-row').forEach(row => {
             const emp = data.gastosEmpaque.find(e => e.id === parseInt(row.querySelector('.emp-item').value));
             const cant = parseFloat(row.querySelector('.emp-cantidad').value) || 0;
             const sub = emp ? emp.precioUnitario * cant : 0;
@@ -984,7 +1004,7 @@ if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error
 
             const empaque = [];
             let totalEmpaque = 0;
-            document.querySelectorAll('#ventaEmpaque .articulo-row').forEach(row => {
+            document.querySelectorAll('#ventaEmpaque .empaque-row').forEach(row => {
                 const empaqueId = parseInt(row.querySelector('.emp-item').value);
                 const cantidad = parseFloat(row.querySelector('.emp-cantidad').value) || 0;
                 const emp = data.gastosEmpaque.find(e => e.id === empaqueId);
@@ -1026,7 +1046,7 @@ if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error
                     data.ventas[idx] = { id: ventaId, fecha, cliente, metodoPago, cuentaDestino, ocasion, tipoVenta, canal, notas, estadoPago, montoPagado, articulos, empaque, cantidadTotal, totalArticulos, totalEmpaque, total };
                 }
             } else {
-                const { data: row, error: insErr } = await sb.from('ventas').insert(dbVenta).select().single();
+                const { data: row, error: insErr } = await sb.from('ventas').insert({ ...dbVenta, created_at: new Date().toISOString() }).select().single();
                 if (insErr) throw insErr;
                 ventaId = row.id;
                 data.ventas.unshift({ id: ventaId, fecha, cliente, metodoPago, cuentaDestino, ocasion, tipoVenta, canal, notas, estadoPago, montoPagado, articulos, empaque, cantidadTotal, totalArticulos, totalEmpaque, total });
