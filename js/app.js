@@ -1189,11 +1189,17 @@ if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error
         const totalEmpaque = ventas.reduce((s, v) => s + (v.totalEmpaque || 0), 0);
         const ticketPromedio = ventas.length > 0 ? totalVentas / ventas.length : 0;
 
+        // Por cobrar: TODAS las ventas con saldo pendiente (global, ignora filtros)
+        const ventasPorCobrar = data.ventas.filter(v => (v.total - (v.montoPagado || 0)) > 0.01);
+        const cantidadPorCobrar = ventasPorCobrar.length;
+        const montoPorCobrar = ventasPorCobrar.reduce((s, v) => s + (v.total - (v.montoPagado || 0)), 0);
+
         document.getElementById('ventasKPIs').innerHTML = `
             <div class="kpi-card primary"><div class="kpi-label">Total Ventas</div><div class="kpi-value">${this.formatMoney(totalVentas)}</div><div class="kpi-detail">${ventas.length} transacciones</div></div>
             <div class="kpi-card info"><div class="kpi-label">Unidades Vendidas</div><div class="kpi-value">${totalUnidades.toLocaleString('es-AR')}</div></div>
             <div class="kpi-card warning"><div class="kpi-label">Gasto Empaque</div><div class="kpi-value">${this.formatMoney(totalEmpaque)}</div></div>
             <div class="kpi-card success"><div class="kpi-label">Ticket Promedio</div><div class="kpi-value">${this.formatMoney(ticketPromedio)}</div></div>
+            <div class="kpi-card danger"><div class="kpi-label">Por Cobrar</div><div class="kpi-value">${this.formatMoney(montoPorCobrar)}</div><div class="kpi-detail">${cantidadPorCobrar} venta${cantidadPorCobrar === 1 ? '' : 's'} pendiente${cantidadPorCobrar === 1 ? '' : 's'}</div></div>
         `;
     },
 
