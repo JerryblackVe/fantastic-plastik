@@ -526,7 +526,15 @@ if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error
             grid.innerHTML = '<div class="empty-state visible"><i class="fas fa-box-open"></i><p>No hay productos. Haz clic en "+ Nuevo Producto" para comenzar.</p></div>';
             return;
         }
-        grid.innerHTML = data.productos.map(p => {
+        const termProd = (document.getElementById('buscarProducto')?.value || '').toLowerCase().trim();
+        const lista = termProd
+            ? data.productos.filter(p => (p.nombre || '').toLowerCase().includes(termProd))
+            : data.productos;
+        if (lista.length === 0) {
+            grid.innerHTML = `<div class="empty-state visible"><i class="fas fa-search"></i><p>No se encontraron productos para "${termProd}".</p></div>`;
+            return;
+        }
+        grid.innerHTML = lista.map(p => {
             const c = this.calcCostoProducto(p);
             const materia = this.getMateriaPrima(p.materiaPrimaId);
             const impresora = this.getImpresora(p.impresoraId);
@@ -1137,11 +1145,22 @@ if (error) { console.error('Turso error:', error); this.toast('Error: ' + (error
         const ocasion = document.getElementById('filtroOcasion').value;
         const tipo = document.getElementById('filtroTipo').value;
         const canal = document.getElementById('filtroCanal').value;
+        const busqueda = (document.getElementById('buscarVenta')?.value || '').toLowerCase().trim();
         if (mes) ventas = ventas.filter(v => v.fecha && v.fecha.startsWith(mes));
         if (metodo) ventas = ventas.filter(v => v.metodoPago === metodo);
         if (ocasion) ventas = ventas.filter(v => v.ocasion === ocasion);
         if (tipo) ventas = ventas.filter(v => v.tipoVenta === tipo);
         if (canal) ventas = ventas.filter(v => v.canal === canal);
+        if (busqueda) {
+            ventas = ventas.filter(v => {
+                const nombresProd = v.articulos.map(a => {
+                    const p = data.productos.find(pr => pr.id === a.productoId);
+                    return p ? p.nombre : '';
+                }).join(' ');
+                const texto = `${v.cliente} ${v.ocasion} ${v.notas} ${v.metodoPago} ${v.canal} ${nombresProd}`.toLowerCase();
+                return texto.includes(busqueda);
+            });
+        }
         return ventas.sort((a, b) => b.fecha.localeCompare(a.fecha));
     },
 
